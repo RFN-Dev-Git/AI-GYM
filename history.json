@@ -1,0 +1,34 @@
+{
+  "exercise": "Hack Squat",
+  "date": "2026-07-12T18:38:37",
+  "good": 3,
+  "bad": 2,
+  "total": 5,
+  "reps": [
+    {
+      "rep": 1,
+      "result": "bad",
+      "time": "00:04"
+    },
+    {
+      "rep": 2,
+      "result": "bad",
+      "time": "00:08"
+    },
+    {
+      "rep": 3,
+      "result": "good",
+      "time": "00:12"
+    },
+    {
+      "rep": 4,
+      "result": "good",
+      "time": "00:14"
+    },
+    {
+      "rep": 5,
+      "result": "good",
+      "time": "00:17"
+    }
+  ]
+}

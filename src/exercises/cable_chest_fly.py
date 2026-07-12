@@ -10,6 +10,7 @@ from .rules import CounterRule, ValidationRule
 @dataclass
 class CableChestFlyExercise(Exercise):
     name: str = "Cable Chest Fly"
+    camera: str = "both"
 
     counter_rules: list[CounterRule] = field(
         default_factory=lambda: [

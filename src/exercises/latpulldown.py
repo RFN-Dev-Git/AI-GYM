@@ -10,6 +10,7 @@ from .rules import CounterRule, ValidationRule
 @dataclass
 class LatPulldownExercise(Exercise):
     name: str = "Lat Pulldown"
+    camera: str = "side"
 
     counter_rules: list[CounterRule] = field(
         default_factory=lambda: [

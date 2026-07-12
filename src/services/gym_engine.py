@@ -10,6 +10,8 @@ from ..exercises.exercise import Exercise
 from ..exercises.validation import ValidationResult, validate_all, violations
 from ..utils.geometry import ComputedAngle, calc_angle, get_points
 from ..utils.render import draw_angle_arc, draw_angle_labels, draw_skeleton, draw_stats, fit_to_screen
+from ..utils.history import HistoryWriter
+from ..utils.camera_side import CameraSideDetector
 from .pose_service import PoseService
 from .rep_counter import RepCounter
 
@@ -45,12 +47,26 @@ class GymEngine:
         # Optional maximum display width (e.g. DISPLAY_MAX_WIDTH). The frame is
         # first auto-fit to the detected screen; this only caps it further.
         self.display_width = display_width
+        self.history_writer = HistoryWriter(exercise.name)
+        self.side_detector = CameraSideDetector(30) if exercise.camera == "side" else None
+        self.rules_adapted = False if exercise.camera == "side" else True
 
     # ------------------------------------------------------------------
     # Analysis: pure logic, no I/O -> easy to unit test with fake landmarks.
     # ------------------------------------------------------------------
-    def analyze(self, landmarks, width: int, height: int) -> FrameResult:
+    def analyze(self, landmarks, width: int, height: int, frame_id: int) -> FrameResult:
         """Compute angles, update the counter, and run validation rules."""
+        if self.side_detector and not self.rules_adapted:
+            side = self.side_detector.process_frame(landmarks)
+            if side:
+                from ..utils.camera_side import adapt_rules
+                self.exercise.counter_rules = adapt_rules(self.exercise.counter_rules, side)
+                self.exercise.validation_rules = adapt_rules(self.exercise.validation_rules, side)
+                self.counter = RepCounter(self.exercise.counter_rules)
+                self.rules_adapted = True
+            if not self.rules_adapted:
+                return FrameResult(angles={}, states=self.counter.states, results=[], views=[])
+
         angles = {}
         views = []  # unified per-rule angle views for the renderer
 
@@ -62,8 +78,13 @@ class GymEngine:
             # Counter angles are never "failed" -> drawn with the highlight colour.
             views.append(ComputedAngle(name=rule.name, vertex=vertex, angle=angle, is_error=False))
 
-        self.counter.update(angles)
+        # Track old counts to detect completion of a rep
+        old_counts = {name: (state.good, state.bad) for name, state in self.counter.states.items()}
+
         results = validate_all(self.exercise.validation_rules, landmarks, width, height)
+        has_violation = len(violations(results)) > 0
+
+        self.counter.update(angles, has_violation)
 
         for res in results:
             pts = get_points(res.joints, landmarks, width, height)
@@ -71,6 +92,22 @@ class GymEngine:
             views.append(
                 ComputedAngle(name=res.rule_name, vertex=vertex, angle=res.angle, is_error=not res.passed)
             )
+
+        # Record rep to history if completed
+        if self.exercise.counter_rules:
+            primary_name = self.exercise.counter_rules[0].name
+            if primary_name in old_counts:
+                old_good, old_bad = old_counts[primary_name]
+                new_state = self.counter.states[primary_name]
+                if new_state.good > old_good or new_state.bad > old_bad:
+                    rep_type = "good" if new_state.good > old_good else "bad"
+                    active_violations = [r.message for r in violations(results)]
+                    self.history_writer.record(
+                        rep_num=new_state.count,
+                        result=rep_type,
+                        frame_id=frame_id,
+                        violations=active_violations
+                    )
 
         return FrameResult(
             angles=angles, states=self.counter.states, results=results, views=views
@@ -110,7 +147,9 @@ class GymEngine:
         draw_stats(
             frame,
             exercise_name=self.exercise.name,
-            reps=primary.count,
+            good=primary.good,
+            bad=primary.bad,
+            total=primary.count,
             stage=primary.stage,
             state="GOOD" if not issues else "BAD",
             angle=primary.angle,
@@ -156,7 +195,7 @@ class GymEngine:
 
             if result and result.pose_landmarks:
                 lm = result.pose_landmarks[0]
-                frame_result = self.analyze(lm, w, h)
+                frame_result = self.analyze(lm, w, h, frame_id)
                 self._render(frame, frame_result, lm, w, h)
 
             if writer:
@@ -175,3 +214,7 @@ class GymEngine:
         if writer:
             writer.release()
         cv2.destroyAllWindows()
+
+        # Save workout history to history.json
+        primary = self.counter.primary
+        self.history_writer.save(good=primary.good, bad=primary.bad)

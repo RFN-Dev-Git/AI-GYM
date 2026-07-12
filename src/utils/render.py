@@ -22,21 +22,48 @@ def draw_skeleton(frame, pts, colors, is_bad=False):
     if len(pts) < 3:
         return
 
-    line_color = colors.ERROR if is_bad else colors.LINE
-    point_color = colors.ERROR if is_bad else colors.HIGHLIGHT
+    # ── Visual constants — matched pixel-by-pixel to the reference design ─────
+    # Dodger-blue  BGR = (235, 145, 30)  →  RGB(30,145,235)  bright blue
+    SKEL_COLOR  = (255, 255, 255)
+    line_color  = colors.ERROR if is_bad else SKEL_COLOR
+    point_color = colors.ERROR if is_bad else SKEL_COLOR
 
-    cv2.line(frame, pts[0], pts[1], line_color, 3)
-    cv2.line(frame, pts[1], pts[2], line_color, 3)
+    LINE_W   = 5    # thin line — exactly like the reference image
+    RADIUS   = 12   # circle radius slightly bigger than line width
+    BORDER_W = 8    # circle border — same weight as the lines
 
+    def _edge_point(src, dst, r):
+        """Point on the edge of the circle at *src* facing *dst*.
+        Lines are drawn FROM here so they never cross into the circle."""
+        dx, dy = dst[0] - src[0], dst[1] - src[1]
+        dist = math.hypot(dx, dy)
+        if dist < 1:
+            return src
+        return (int(src[0] + dx / dist * r),
+                int(src[1] + dy / dist * r))
+
+    p0, p1, p2 = pts[0], pts[1], pts[2]
+
+    # ① Lines drawn FIRST — sit behind the circles
+    cv2.line(frame,
+             _edge_point(p0, p1, RADIUS), _edge_point(p1, p0, RADIUS),
+             line_color, LINE_W, cv2.LINE_AA)
+    cv2.line(frame,
+             _edge_point(p1, p2, RADIUS), _edge_point(p2, p1, RADIUS),
+             line_color, LINE_W, cv2.LINE_AA)
+
+    # ② Hollow circles drawn LAST — always on top, clean edges, never filled
     for p in pts:
-        cv2.circle(frame, p, 6, point_color, -1)
+        cv2.circle(frame, p, RADIUS, point_color, BORDER_W, cv2.LINE_AA)
 
 
 def draw_stats(
     frame,
     *,
     exercise_name: str,
-    reps: int,
+    good: int,
+    bad: int,
+    total: int,
     stage: str,
     state: str,
     angle: float,
@@ -58,7 +85,9 @@ def draw_stats(
 
     lines = [
         exercise_name,
-        f"Reps: {reps}",
+        f"Good Reps: {good}",
+        f"Bad Reps: {bad}",
+        f"Total Reps: {total}",
         f"Stage: {stage}",
         f"State: {state}",
         f"Angle: {int(angle)} deg",
@@ -172,9 +201,12 @@ def fit_to_screen(frame, max_width=None,
 def draw_angle_arc(frame, a, b, c, colors, is_bad=False, radius=20):
     """Draw the visual angle arc at point B between BA and BC.
 
-    Only the arc is drawn here; the numeric angle value is rendered by
-    ``draw_angle_labels`` for every computed angle (counter + validation).
+    The arc radius is set LARGER than the skeleton circle (RADIUS=22) so the
+    arc appears clearly OUTSIDE the joint circle — never overlapping it.
+    Only the arc is drawn here; the numeric label is rendered by draw_angle_labels.
     """
+    # Arc must be bigger than the skeleton circle radius (22px) to sit outside it
+    ARC_RADIUS = 42   # clearly outside the 22px skeleton circle
 
     ba = (a[0] - b[0], a[1] - b[1])
     bc = (c[0] - b[0], c[1] - b[1])
@@ -183,18 +215,18 @@ def draw_angle_arc(frame, a, b, c, colors, is_bad=False, radius=20):
     angle2 = math.degrees(math.atan2(bc[1], bc[0]))
 
     start_angle = int(angle1)
-    end_angle = int(angle2)
+    end_angle   = int(angle2)
 
-    # fix direction (always draw smallest arc)
+    # Always draw the smallest arc (the actual angle, not the reflex)
     if end_angle < start_angle:
         end_angle += 360
-
     if end_angle - start_angle > 180:
         start_angle, end_angle = end_angle, start_angle + 360
 
     color = colors.ERROR if is_bad else colors.HIGHLIGHT
 
-    cv2.ellipse(frame, b, (radius, radius), 0, start_angle, end_angle, color, 5)
+    cv2.ellipse(frame, b, (ARC_RADIUS, ARC_RADIUS),
+                0, start_angle, end_angle, color, 2, cv2.LINE_AA)
 
 
 # ── Floating angle-label layout ──────────────────────────────────────────────

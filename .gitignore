@@ -225,3 +225,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+
+# Ignore videos and outputs
+src/assets/videos/
+output/
+*.mp4
+
+# Ignore notebooks
+Media Pipe Pose Tutorial.ipynb
+playground.ipynb
+
+# Ignore models and executables
+src/assets/models/pose_landmarker_heavy.task
+codex.exe

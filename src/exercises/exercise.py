@@ -14,7 +14,7 @@ class DisplaySettings:
     exercise logic. All fields are optional with safe defaults.
     """
 
-    show_angle_arc: bool = True
+    show_angle_arc: bool = False   # arc removed — only numeric label shown
     show_skeleton: bool = True
 
 
@@ -42,3 +42,4 @@ class Exercise:
     validation_rules: list[ValidationRule] = field(default_factory=list)
     display: DisplaySettings = field(default_factory=DisplaySettings)
     metadata: dict[str, Any] = field(default_factory=dict)
+    camera: str = "both"
