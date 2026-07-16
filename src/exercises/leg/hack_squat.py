@@ -33,7 +33,7 @@ class HackSquatExercise(Exercise):
                 min_angle=65,
                 max_angle=165,
                 message="Don't lock your left knee",
-                severity="warning",
+                severity="error",
             ),
             AngleValidationRule(
                 name="knee_unlocked_right",
@@ -41,7 +41,7 @@ class HackSquatExercise(Exercise):
                 min_angle=65,
                 max_angle=165,
                 message="Don't lock your right knee",
-                severity="warning",
+                severity="error",
             )
         ]
     )

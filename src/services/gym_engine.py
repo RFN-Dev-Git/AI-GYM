@@ -249,6 +249,7 @@ class GymEngine:
             )
             self._export_session(summary)
 
+        print(self.judge.history)
         cap.release()
         if writer:
             writer.release()
