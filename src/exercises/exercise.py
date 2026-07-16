@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from .rules import CounterRule, ValidationRule
+from .rules import AngleCounterRule, AngleValidationRule
 
 
 @dataclass
@@ -38,7 +38,7 @@ class Exercise:
     """
 
     name: str = ""
-    counter_rules: list[CounterRule] = field(default_factory=list)
-    validation_rules: list[ValidationRule] = field(default_factory=list)
+    counter_rules: list[AngleCounterRule] = field(default_factory=list)
+    validation_rules: list[AngleValidationRule] = field(default_factory=list)
     display: DisplaySettings = field(default_factory=DisplaySettings)
     metadata: dict[str, Any] = field(default_factory=dict)

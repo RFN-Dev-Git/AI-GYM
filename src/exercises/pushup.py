@@ -4,15 +4,15 @@ from dataclasses import dataclass, field
 
 from ..core.pose_segments import PoseSegments
 from .exercise import Exercise
-from .rules import CounterRule, ValidationRule
+from .rules import AngleCounterRule, AngleValidationRule
 
 
 @dataclass
 class PushUpExercise(Exercise):
     name: str = "Push-Up"
-    counter_rules: list[CounterRule] = field(
+    counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
-            CounterRule(
+            AngleCounterRule(
                 name="elbow",
                 joints=PoseSegments.LEFT_ARM,
                 up_angle=160,
@@ -20,9 +20,9 @@ class PushUpExercise(Exercise):
             ),
         ]
     )
-    validation_rules: list[ValidationRule] = field(
+    validation_rules: list[AngleValidationRule] = field(
         default_factory=lambda: [
-            ValidationRule(
+            AngleValidationRule(
                 name="back_straight",
                 joints=PoseSegments.LEFT_TORSO,
                 min_angle=150,
@@ -30,7 +30,7 @@ class PushUpExercise(Exercise):
                 message="Keep your back straight",
                 severity="error",
             ),
-            ValidationRule(
+            AngleValidationRule(
                 name="elbow_unlocked",
                 joints=PoseSegments.LEFT_ARM,
                 min_angle=0,

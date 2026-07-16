@@ -1,7 +1,7 @@
 """MediaPipe BlazePose landmark indices and common joint segments.
 
 These are *anatomical* constants, not exercise logic. Exercises reference them
-when building their CounterRule / ValidationRule configurations, which keeps the
+when building their AngleCounterRule / AngleValidationRule configurations, which keeps the
 raw landmark numbers out of the exercise definitions and out of GymEngine.
 """
 

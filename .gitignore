@@ -1,10 +1,12 @@
-src/assets/videos/
+# Videos are ignored, but the directory itself is kept in Git via .gitkeep.
+assets/videos/*
+!assets/videos/.gitkeep
 output/
+sessions/
 
 Media Pipe Pose Tutorial.ipynb
 playground.ipynb
 
-src/assets/models/pose_landmarker_heavy.task
 codex.exe
 
 # Byte-compiled / optimized / DLL files

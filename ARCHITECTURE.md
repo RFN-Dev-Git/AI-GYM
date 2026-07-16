@@ -12,31 +12,39 @@ src/
   core/
     colors.py        Colors dataclass                          [unchanged]
     pose_segments.py MediaPipe landmark indices + named chains [cleaned up]
-  exercises/      << NEW >>  pure configuration, zero logic
-    rules.py         CounterRule, ValidationRule dataclasses
+  exercises/      << config-driven >>  pure configuration, zero logic
+    rules.py         AngleCounterRule, AngleValidationRule dataclasses
     exercise.py      Exercise dataclass (+ DisplaySettings)
     validation.py    evaluate_rule / validate_all  (the ONE extension point)
     pushup.py         PushUpExercise
     squat.py          SquatExercise
-    leg_press.py      LegPressExercise
     shoulder_press.py ShoulderPressExercise
     biceps_curl.py    BicepsCurlExercise
+    cable_chest_fly.py CableChestFlyExercise
+    deadlift.py        DeadliftExercise
+    latpulldown.py      LatPulldownExercise
+    leg/               lower-body exercises subpackage
+      __init__.py       re-exports the subpackage
+      leg_press.py       LegPressExercise
+      hack_squat.py      HackSquatExercise
   services/
     pose_service.py  MediaPipe wrapper                         [unchanged]
-    rep_counter.py   RepCounter driven by list[CounterRule]    [refactored]
+    rep_counter.py   RepCounter driven by list[AngleCounterRule]    [refactored]
+    rep_judge.py     RepJudge + RepResult — repetition quality [new]
     gym_engine.py    GymEngine(exercise) — generic orchestrator[refactored]
   utils/
-    geometry.py      calc_angle / get_points                   [unchanged]
-    render.py        drawing helpers (draw_stats now shows issues) [refactored]
-  main.py          GymEngine(PushUpExercise())                 [refactored]
+    geometry.py      calc_angle / get_points + ComputedAngle   [unchanged]
+    render.py        drawing helpers + fit_to_screen           [refactored]
+  main.py          CLI: python -m src.main <exercise> [video]  [refactored]
+requirements.txt  pinned deps (mediapipe, opencv, pydantic-settings)
 ```
 
 ## The configuration objects
 
-### `CounterRule` (one repetition counter)
+### `AngleCounterRule` (one repetition counter)
 ```python
 @dataclass(frozen=True)
-class CounterRule:
+class AngleCounterRule:
     name: str
     joints: tuple[int, int, int]   # 3 pose landmarks forming an angle
     up_angle: float                # "top" of a rep
@@ -44,13 +52,13 @@ class CounterRule:
     up_stage: str = "up"           # configurable stage vocabulary
     down_stage: str = "down"
 ```
-Frozen dataclass = immutable config. A `CounterRule` is completely
+Frozen dataclass = immutable config. A `AngleCounterRule` is completely
 exercise-agnostic — it only knows three landmarks and two thresholds.
 
-### `ValidationRule` (one independent form-check)
+### `AngleValidationRule` (one independent form-check)
 ```python
 @dataclass(frozen=True)
-class ValidationRule:
+class AngleValidationRule:
     name: str
     joints: tuple[int, int, int]
     min_angle: float
@@ -66,8 +74,8 @@ the coaching cue. Rules never reference each other.
 @dataclass
 class Exercise:
     name: str
-    counter_rules: list[CounterRule]      # supports multiple angles
-    validation_rules: list[ValidationRule]  # supports multiple checks
+    counter_rules: list[AngleCounterRule]      # supports multiple angles
+    validation_rules: list[AngleValidationRule]  # supports multiple checks
     display: DisplaySettings              # optional presentation knobs
     metadata: dict                        # free-form, engine ignores it
 ```
@@ -82,32 +90,53 @@ only an `Exercise`. Its single job is the loop:
 1. `PoseService` detects the pose.
 2. `analyze()` computes **only the angles the exercise asked for** (from
    `counter_rules`).
-3. `RepCounter` updates the repetition count.
-4. `validate_all()` runs **every** validation rule.
-5. `_render()` draws whatever the configuration describes and shows live
-   coaching messages.
+3. `validate_all()` runs **every** validation rule -> one `ValidationResult`
+   per rule.
+4. `RepJudge.observe()` records the frame's validation failures (de-duplicated
+   by rule name).
+5. `RepCounter.update()` advances the repetition count. `GymEngine` reads the
+   new count; when it increased it calls `RepJudge.finalize_rep()` to classify
+   the completed repetition as GOOD/BAD and store a `RepResult`.
+6. `_render()` draws whatever the configuration describes, including the live
+   coaching messages and the rep-quality overlay (Total / Good / Bad / Current
+   Rep).
+7. The frame is **auto-fitted to the screen** via `fit_to_screen()` (preserves
+   aspect ratio, never upscales, respects a margin, and caches the detected
+   screen size). Pose math — and, when `SAVE_OUTPUT` is on, the recorded video —
+   always use the **original-resolution** frame; only the displayed frame is
+   resized.
 
 `analyze()` is pure logic with no I/O, so it is trivially unit-testable with
-fake landmarks (see the notes in the PR / review). `run()` owns the video
-source, writer, and `cv2` window.
+fake landmarks. `run(video_path=None)` owns the video source (an explicit
+`video_path` overrides `settings.VIDEO_PATH` / webcam), the optional writer,
+and the `cv2` window.
 
 ## Adding a new exercise
 
-Create one dataclass subclass in its own module, e.g. `exercises/pushup.py`:
+1. **Define** the config in its own module, e.g. `exercises/pushup.py`:
 
 ```python
 @dataclass
 class PlankExercise(Exercise):
     name: str = "Plank"
-    counter_rules: list[CounterRule] = field(default_factory=lambda: [
-        CounterRule("elbow", PoseSegments.LEFT_ARM, up_angle=160, down_angle=90),
+    counter_rules: list[AngleCounterRule] = field(default_factory=lambda: [
+        AngleCounterRule("elbow", PoseSegments.LEFT_ARM, up_angle=160, down_angle=90),
     ])
-    validation_rules: list[ValidationRule] = field(default_factory=lambda: [
-        ValidationRule("back_straight", PoseSegments.LEFT_TORSO,
+    validation_rules: list[AngleValidationRule] = field(default_factory=lambda: [
+        AngleValidationRule("back_straight", PoseSegments.LEFT_TORSO,
                        min_angle=150, max_angle=180,
                        message="Keep your back straight", severity="error"),
     ])
 ```
+
+2. **Re-export** it from `exercises/__init__.py` (one import line) so callers can
+   do `from src.exercises import PlankExercise`.
+3. **(Optional) Register** it in `main.py`'s `EXERCISES` dict (name → class) so it
+   is selectable from the CLI: `python -m src.main plank`.
+
+Related exercises can be grouped into a subpackage — e.g. the lower-body moves
+live in `exercises/leg/` (`leg_press.py`, `hack_squat.py`), whose `__init__.py`
+re-exports them and is itself re-exported from `exercises/__init__.py`.
 
 Then `GymEngine(PlankExercise())` just works. **No engine change.**
 
@@ -120,7 +149,7 @@ Then `GymEngine(PlankExercise())` just works. **No engine change.**
 
 ## Floating angle labels (per-rule)
 
-Every computed angle — from **both** `CounterRule`s and `ValidationRule`s — gets
+Every computed angle — from **both** `AngleCounterRule`s and `AngleValidationRule`s — gets
 a small floating label showing its value (e.g. `165°`) next to the vertex joint.
 It is implemented so the renderer never names a specific rule or exercise:
 
@@ -135,8 +164,46 @@ It is implemented so the renderer never names a specific rule or exercise:
   resolution so on-screen size is constant after the final resize.
 
 Because the labels are driven entirely by `FrameResult.views`, an exercise with
-`1 CounterRule + 4 ValidationRule` automatically shows **5** labels with **zero**
+`1 AngleCounterRule + 4 AngleValidationRule` automatically shows **5** labels with **zero**
 renderer or engine changes.
+
+## RepJudge — repetition quality (RepResult)
+
+Counting and quality are **separate concerns** handled by separate services:
+
+- `RepCounter` detects *that* a repetition happened (count, stage) and knows
+  nothing about form.
+- `validate_all` / `ValidationResult` evaluate the pose for *one* frame.
+- `RepJudge` (`services/rep_judge.py`) watches the per-frame `ValidationResult`s,
+  remembers which rules failed during the **current** repetition, and — once
+  `GymEngine` tells it a rep completed (via `finalize_rep`) — emits a single
+  `RepResult` and resets for the next rep.
+
+```python
+@dataclass
+class RepResult:
+    number: int                      # 1-based, matches on-screen rep counter
+    good: bool                      # False iff any violation has severity "error"
+    violations: list[ValidationResult]   # de-duplicated by rule name (raw objects)
+    start_frame: int | None = None
+    end_frame:   int | None = None
+```
+
+Key behaviours:
+
+- **De-duplication.** The same rule failing across many frames is stored once.
+  When severities differ we keep the *worst* (`error` > `warning` > `info`) so an
+  error is never masked by an earlier warning.
+- **Classification.** A rep is BAD iff at least one stored violation has
+  `severity == "error"`. Warnings alone leave it GOOD.
+- **History is the single source of truth.** `RepJudge` keeps `history:
+  list[RepResult]` and derives `total_reps` / `good_reps` / `bad_reps` /
+  `last_rep` as read-only properties. There are **no** `good_reps` / `bad_reps`
+  / `total_reps` counters to drift out of sync.
+- **Independence.** `RepJudge` never imports `RepCounter` and vice-versa. The
+  only coupling is in `GymEngine.analyze`, which calls `judge.observe(results,
+  frame)` every frame, compares `RepCounter.primary.count` before/after
+  `counter.update`, and calls `judge.finalize_rep(...)` on a detected completion.
 
 ## Future extensibility (requirement 10)
 
@@ -145,15 +212,20 @@ renderer or engine changes.
 | Multiple counter angles | already supported — `counter_rules` is a list |
 | Multiple validation angles | already supported — `validation_rules` is a list |
 | Distance / alignment / symmetry rules | add a new rule dataclass in `rules.py` and branch in `evaluate_rule()` (see the EXTENSION POINT comment). `GymEngine` only calls `validate_all`, so it is untouched |
-| Richer feedback messages | `ValidationRule.message` is already free text; add fields as needed |
+| Richer feedback messages | `AngleValidationRule.message` is already free text; add fields as needed |
 | Exercise metadata | `Exercise.metadata` dict already exists; engine ignores it |
+| Form Score | fold `RepResult.violations` (e.g. weighted by severity) into a per-rep score; aggregate over `RepJudge.history` — pure function, no engine change |
+| Tempo Analysis / Time Under Tension | use `start_frame`/`end_frame` (already on `RepResult`) + frame rate; compute per rep, aggregate over `history` |
+| Range of Motion | extend `RepResult` with the min/max angle captured during the rep, or read it from the stored `ValidationResult`s |
+| Session Reports / Exercise Analytics / Progress Tracking | serialise `RepJudge.history` (a plain `list[RepResult]`); build reports from the raw `ValidationResult`s without touching `GymEngine` |
+| Most Common Errors | `Counter(dict).update(r.violations for r in history)` — the raw objects are stored, so no re-derivation needed |
 
 ## Design decisions & SOLID rationale
 
 - **Single Responsibility (SRP).** `PoseService` = detection, `RepCounter` =
-  counting, `validate_all` = validation, `render` = drawing, `GymEngine` =
-  orchestration only. The old `GymEngine` did IO + detection + counting +
-  rendering in one class.
+  counting, `validate_all` = validation, `RepJudge` = repetition-quality
+  judging, `render` = drawing, `GymEngine` = orchestration only. The old
+  `GymEngine` did IO + detection + counting + rendering in one class.
 - **Open/Closed (OCP).** `GymEngine` is closed for modification but open for
   extension: new exercises/rule-kinds are added as *data* (and one evaluator
   branch), never by editing the engine.

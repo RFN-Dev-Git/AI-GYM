@@ -4,16 +4,16 @@ from dataclasses import dataclass, field
 
 from ..core.pose_segments import PoseSegments
 from .exercise import Exercise
-from .rules import CounterRule, ValidationRule
+from .rules import AngleCounterRule, AngleValidationRule
 
 
 @dataclass
 class DeadliftExercise(Exercise):
     name: str = "Deadlift: Dissected"
 
-    counter_rules: list[CounterRule] = field(
+    counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
-            CounterRule(
+            AngleCounterRule(
                 name="knee",
                 joints=PoseSegments.RIGHT_LEG,   # R_HIP -> R_KNEE -> R_ANKLE
                 up_angle=165,
@@ -24,10 +24,10 @@ class DeadliftExercise(Exercise):
         ]
     )
 
-    validation_rules: list[ValidationRule] = field(
+    validation_rules: list[AngleValidationRule] = field(
         default_factory=lambda: [
             # Shoulder -> Hip -> Knee: detects back rounding under load
-            ValidationRule(
+            AngleValidationRule(
                 name="back_straight",
                 joints=PoseSegments.RIGHT_HIP_HINGE,
                 min_angle=40,
@@ -36,7 +36,7 @@ class DeadliftExercise(Exercise):
                 severity="error",
             ),
             # Ear -> Shoulder -> Hip: detects forward head / neck drop
-            ValidationRule(
+            AngleValidationRule(
                 name="neck_neutral",
                 joints=PoseSegments.RIGHT_NECK_ALIGN,
                 min_angle=140,

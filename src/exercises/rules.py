@@ -13,7 +13,7 @@ Severity = Literal["error", "warning", "info"]
 
 
 @dataclass(frozen=True)
-class CounterRule:
+class AngleCounterRule:
     """Describes how ONE repetition is counted from a single joint angle.
 
     Why a dataclass (not a function/class hierarchy): a rep count is fully
@@ -42,7 +42,7 @@ class CounterRule:
 
 
 @dataclass(frozen=True)
-class ValidationRule:
+class AngleValidationRule:
     """Describes ONE independent form-check based on a joint angle.
 
     Each rule is completely self-contained: it knows which angle to measure and

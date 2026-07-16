@@ -37,9 +37,11 @@ def draw_stats(
     *,
     exercise_name: str,
     reps: int,
+    good_reps: int,
+    bad_reps: int,
+    current_rep: str,
     stage: str,
-    state: str,
-    angle: float,
+    angle: float | None,
     feedback: list[str] | None = None,
     colors,
 ):
@@ -50,18 +52,27 @@ def draw_stats(
     resolution. It is intentionally NOT anchored to any body landmark — its
     position is fixed on screen.
 
-    Core lines: exercise name, Reps, Stage, State, Current Angle.
-    Exercise-specific feedback (validation cues) is appended below.
+    Core lines: exercise name, Total/Good/Bad reps, Current Rep quality, Stage,
+    and Current Angle. Exercise-specific feedback (validation cues) is appended
+    below.
+
+    ``reps`` is the total completed-repetition count; ``good_reps`` /
+    ``bad_reps`` split it by quality; ``current_rep`` shows the quality of the
+    last *completed* repetition ("GOOD" / "BAD" / "—" before any rep finishes).
+    All three counts are supplied by the caller (typically ``RepJudge``) so they
+    stay consistent with the stored history.
     """
     h, w = frame.shape[:2]
     feedback = feedback or []
 
     lines = [
         exercise_name,
-        f"Reps: {reps}",
-        f"Stage: {stage}",
-        f"State: {state}",
-        f"Angle: {int(angle)} deg",
+        f"Total Reps : {reps}",
+        f"Good Reps  : {good_reps}",
+        f"Bad Reps   : {bad_reps}",
+        f"Current Rep: {current_rep}",
+        f"Stage      : {stage}",
+        f"Angle      : {int(angle)} deg" if angle is not None else "Angle: N/A",
     ]
     # Exercise-specific feedback below the core information.
     for msg in feedback:
@@ -70,10 +81,8 @@ def draw_stats(
     def line_color(text: str):
         if text.startswith("- "):
             return colors.ERROR
-        if text.startswith("State: GOOD"):
-            return colors.HIGHLIGHT
-        if text.startswith("State: BAD"):
-            return colors.ERROR
+        if text.startswith("Current Rep:"):
+            return colors.ERROR if "BAD" in text else colors.HIGHLIGHT
         return colors.TEXT
 
     # Measure the box from the actual text.
@@ -221,8 +230,8 @@ def _angle_scale(width: int) -> float:
 def draw_angle_labels(frame, views: list[ComputedAngle], colors, width: int, height: int):
     """Draw a small floating angle box for EVERY computed angle.
 
-    ``views`` already contains one entry per CounterRule and per
-    ValidationRule (built by GymEngine.analyze), so this function is completely
+    ``views`` already contains one entry per AngleCounterRule and per
+    AngleValidationRule (built by GymEngine.analyze), so this function is completely
     exercise/rule-agnostic: add a rule or a whole new exercise and the labels
     appear automatically with no change here.
 
@@ -239,7 +248,7 @@ def draw_angle_labels(frame, views: list[ComputedAngle], colors, width: int, hei
 
     for v in views:
         color = colors.ERROR if v.is_error else colors.HIGHLIGHT
-        text = f"{int(round(v.angle))} deg"
+        text = "N/A" if v.angle is None else f"{int(round(v.angle))} deg"
 
         (tw, th), _ = cv2.getTextSize(text, ANGLE_FONT, font_scale, thickness)
         box_w = tw + padding * 2

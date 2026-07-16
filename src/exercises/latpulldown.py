@@ -4,16 +4,16 @@ from dataclasses import dataclass, field
 
 from ..core.pose_segments import PoseSegments
 from .exercise import Exercise
-from .rules import CounterRule, ValidationRule
+from .rules import AngleCounterRule, AngleValidationRule
 
 
 @dataclass
 class LatPulldownExercise(Exercise):
     name: str = "Lat Pulldown"
 
-    counter_rules: list[CounterRule] = field(
+    counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
-            CounterRule(
+            AngleCounterRule(
                 name="elbow",
                 joints=PoseSegments.LEFT_ARM,
                 up_angle=165,      # Arms almost fully extended
@@ -22,9 +22,9 @@ class LatPulldownExercise(Exercise):
         ]
     )
 
-    validation_rules: list[ValidationRule] = field(
+    validation_rules: list[AngleValidationRule] = field(
         default_factory=lambda: [
-            ValidationRule(
+            AngleValidationRule(
                 name="back_straight",
                 joints=PoseSegments.LEFT_TORSO,
                 min_angle=145,
@@ -32,7 +32,7 @@ class LatPulldownExercise(Exercise):
                 message="Keep your back straight",
                 severity="error",
             ),
-            ValidationRule(
+            AngleValidationRule(
                 name="avoid_locking_elbows",
                 joints=PoseSegments.LEFT_ARM,
                 min_angle=15,
@@ -40,7 +40,7 @@ class LatPulldownExercise(Exercise):
                 message="Don't lock your elbows",
                 severity="warning",
             ),
-            ValidationRule(
+            AngleValidationRule(
                 name="full_pull",
                 joints=PoseSegments.LEFT_ARM,
                 min_angle=0,

@@ -16,26 +16,12 @@ Available exercises
 
 import sys
 
-from src.config import settings
-from src.core.colors import Colors
-from src.exercises import (
-    BicepsCurlExercise, CableChestFlyExercise, DeadliftExercise,
-    LatPulldownExercise, LegPressExercise, PushUpExercise,
-    ShoulderPressExercise, SquatExercise, HackSquatExercise,  
-)
-from src.services.gym_engine import GymEngine
+from .config import settings
+from .core.colors import Colors
+from .exercises import registry
+from .services.gym_engine import GymEngine
 
-EXERCISES = {
-    "deadlift":        DeadliftExercise,
-    "cable_chest_fly": CableChestFlyExercise,
-    "squat":           SquatExercise,
-    "pushup":          PushUpExercise,
-    "biceps_curl":     BicepsCurlExercise,
-    "lat_pulldown":    LatPulldownExercise,
-    "leg_press":       LegPressExercise,
-    "hack_squat":      HackSquatExercise,  
-    "shoulder_press":  ShoulderPressExercise,
-}
+DEFAULT_EXERCISE = "cable_chest_fly"
 
 
 def main():
@@ -44,15 +30,19 @@ def main():
     exercise_key = args[0].lower() if len(args) >= 1 else None
     video_path   = args[1]         if len(args) >= 2 else None
 
-    if exercise_key and exercise_key not in EXERCISES:
+    # The CLI simply asks the registry for an exercise — it knows nothing about
+    # which exercises exist. GymEngine stays completely unaware of the registry.
+    if exercise_key and not registry.exists(exercise_key):
         print(f"Unknown exercise '{exercise_key}'.")
-        print(f"Available: {', '.join(EXERCISES)}")
+        print(f"Available: {', '.join(registry.list())}")
         sys.exit(1)
 
-    ExerciseClass = EXERCISES[exercise_key] if exercise_key else CableChestFlyExercise
+    exercise = (
+        registry.get(exercise_key) if exercise_key else registry.get(DEFAULT_EXERCISE)
+    )
 
     GymEngine(
-        ExerciseClass(),
+        exercise,
         colors=Colors(),
         display_width=settings.DISPLAY_MAX_WIDTH,
     ).run(video_path=video_path)

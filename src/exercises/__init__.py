@@ -1,8 +1,8 @@
 """Exercise configuration package.
 
 Everything in here is *data*, not behaviour. An exercise is described entirely
-by an :class:`Exercise` instance built from :class:`CounterRule` and
-:class:`ValidationRule` dataclasses. GymEngine consumes these objects and never
+by an :class:`Exercise` instance built from :class:`AngleCounterRule` and
+:class:`AngleValidationRule` dataclasses. GymEngine consumes these objects and never
 needs to know which exercise it is running.
 
 Each exercise lives in its own module (``pushup.py``, ``squat.py``, ...); this
@@ -19,14 +19,15 @@ from .exercise import DisplaySettings, Exercise
 from .latpulldown import LatPulldownExercise
 from .leg import HackSquatExercise, LegPressExercise
 from .pushup import PushUpExercise
-from .rules import CounterRule, ValidationRule
+from .registry import ExerciseRegistry, UnknownExerciseError, registry
+from .rules import AngleCounterRule, AngleValidationRule
 from .shoulder_press import ShoulderPressExercise
 from .squat import SquatExercise
 from .validation import ValidationResult, validate_all, violations
 
 __all__ = [
-    "CounterRule",
-    "ValidationRule",
+    "AngleCounterRule",
+    "AngleValidationRule",
     "Exercise",
     "DisplaySettings",
     "ValidationResult",
@@ -41,4 +42,8 @@ __all__ = [
     "LatPulldownExercise",
     "DeadliftExercise",
     "CableChestFlyExercise",
+    # Registry
+    "registry",
+    "ExerciseRegistry",
+    "UnknownExerciseError",
 ]

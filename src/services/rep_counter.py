@@ -1,9 +1,9 @@
-"""Repetition counter driven entirely by CounterRule configuration."""
+"""Repetition counter driven entirely by AngleCounterRule configuration."""
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-from ..exercises.rules import CounterRule
+from ..exercises.rules import AngleCounterRule
 
 
 @dataclass
@@ -16,7 +16,7 @@ class RepState:
 
 
 class RepCounter:
-    """Counts repetitions from a list of CounterRule configurations.
+    """Counts repetitions from a list of AngleCounterRule configurations.
 
     One :class:`RepState` is kept per rule, so an exercise can count from
     several angles at once (e.g. left + right side for symmetry) with no change
@@ -24,7 +24,7 @@ class RepCounter:
     rule (``primary``); the others remain available in ``states``.
     """
 
-    def __init__(self, rules: List[CounterRule]):
+    def __init__(self, rules: List[AngleCounterRule]):
         self.rules = rules
         self.states: Dict[str, RepState] = {r.name: RepState() for r in rules}
 
@@ -33,10 +33,14 @@ class RepCounter:
         """State backing the displayed rep count (first counter rule)."""
         return next(iter(self.states.values()))
 
-    def update(self, angles: Dict[str, float]) -> Dict[str, RepState]:
+    def update(self, angles: Dict[str, Optional[float]]) -> Dict[str, RepState]:
         """Feed in the current angle for each rule; advance counts/stages."""
         for rule in self.rules:
-            angle = angles.get(rule.name, 0.0)
+            angle = angles.get(rule.name)
+            if angle is None:
+                # Angle could not be computed this frame; skip this rule so a
+                # degenerate pose is never treated as a real 0° angle.
+                continue
             state = self.states[rule.name]
             state.angle = angle
 

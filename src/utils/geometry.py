@@ -7,15 +7,15 @@ class ComputedAngle:
     """One computed angle, ready for the renderer to draw.
 
     This is the single contract between the analysis layer and the rendering
-    layer: ``GymEngine`` produces one ``ComputedAngle`` per ``CounterRule`` and
-    per ``ValidationRule``, and the renderer iterates over them without knowing
+    layer: ``GymEngine`` produces one ``ComputedAngle`` per ``AngleCounterRule`` and
+    per ``AngleValidationRule``, and the renderer iterates over them without knowing
     which exercise or rule produced them. Adding a rule (or a whole new
     exercise) therefore needs zero renderer changes.
     """
 
     name: str
     vertex: tuple          # pixel (x, y) of the middle/vertex joint
-    angle: float
+    angle: float | None   # None when the angle could not be computed
     is_error: bool         # True -> draw with the error colour
 
 
@@ -28,7 +28,8 @@ def calc_angle(a, b, c):
     mag2 = math.hypot(*bc)
 
     if mag1 == 0 or mag2 == 0:
-        return 0.0
+        # Degenerate geometry (overlapping joints) -> angle is undefined.
+        return None
 
     cos_theta = max(-1.0, min(1.0, dot / (mag1 * mag2)))
     return math.degrees(math.acos(cos_theta))
