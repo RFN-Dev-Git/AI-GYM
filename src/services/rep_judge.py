@@ -97,19 +97,24 @@ class RepJudge:
                 self._violations[r.rule_name] = r
 
     # -- completion ------------------------------------------------------
-    def finalize_rep(self, rep_number: int, frame: int = 0) -> RepResult:
+    def finalize_rep(self, rep_number: int, frame: int = 0, force_good: bool | None = None) -> RepResult:
         """Finalize the current repetition and begin tracking the next one.
 
         Builds a :class:`RepResult`, appends it to :attr:`history`, resets the
         temporary per-rep state, and returns the result.
 
-        A repetition is BAD iff at least one stored violation has
-        ``severity == "error"``; warnings alone leave it GOOD.
+        If ``force_good`` is provided (not None), it overrides the internal
+        violation tracking. This is used when RepCounter has already decided
+        quality (tracking violations only from DOWN phase start onward).
         """
-        bad = any(v.severity == "error" for v in self._violations.values())
+        if force_good is not None:
+            good = force_good
+        else:
+            bad = any(v.severity in ("error", "warning") for v in self._violations.values())
+            good = not bad
         result = RepResult(
             number=rep_number,
-            good=not bad,
+            good=good,
             violations=list(self._violations.values()),
             start_frame=self._start_frame,
             end_frame=frame,

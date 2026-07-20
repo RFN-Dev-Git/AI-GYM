@@ -39,6 +39,9 @@ class AngleCounterRule:
     down_angle: float
     up_stage: str = "up"
     down_stage: str = "down"
+    rom_min_angle: float | None = None
+    rom_max_angle: float | None = None
+    min_rep_frames: int = 0   # minimum frames a rep must span (0 = no check)
 
 
 @dataclass(frozen=True)
@@ -62,5 +65,26 @@ class AngleValidationRule:
     joints: tuple[int, int, int]
     min_angle: float
     max_angle: float
+    message: str
+    severity: Severity = "error"
+
+
+@dataclass(frozen=True)
+class AngleROMValidationRule:
+    """Describes a stateful Range of Motion (ROM) validation rule.
+
+    Attributes:
+        name:          Stable id matching the corresponding CounterRule name.
+        joints:        Three pose-landmark indices forming the measured angle.
+        min_rom_angle: Bottom angle threshold (deg) that must be reached.
+        max_rom_angle: Top angle threshold (deg) that must be reached.
+        message:       Human-readable coaching cue shown when the rule fails.
+        severity:      "error" | "warning" | "info" — drives feedback emphasis.
+    """
+
+    name: str
+    joints: tuple[int, int, int]
+    min_rom_angle: float
+    max_rom_angle: float
     message: str
     severity: Severity = "error"

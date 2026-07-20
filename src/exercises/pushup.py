@@ -10,6 +10,7 @@ from .rules import AngleCounterRule, AngleValidationRule
 @dataclass
 class PushUpExercise(Exercise):
     name: str = "Push-Up"
+    camera: str = "side"
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
             AngleCounterRule(

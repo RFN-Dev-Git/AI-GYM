@@ -18,7 +18,7 @@ import sys
 
 from .config import settings
 from .core.colors import Colors
-from .exercises import registry
+from .exercises.registry import registry
 from .services.gym_engine import GymEngine
 
 DEFAULT_EXERCISE = "cable_chest_fly"
@@ -28,7 +28,19 @@ def main():
     args = sys.argv[1:]
 
     exercise_key = args[0].lower() if len(args) >= 1 else None
-    video_path   = args[1]         if len(args) >= 2 else None
+
+    # Parse CLI flags: 'c' for webcam, 's' for saving output
+    lower_args = [arg.lower() for arg in args[1:]]
+    save_flag = "s" in lower_args
+    settings.SAVE_OUTPUT = save_flag
+
+    use_webcam_flag = "c" in lower_args
+    if use_webcam_flag:
+        settings.USE_WEBCAM = True
+        video_path = None
+    else:
+        remaining_args = [arg for arg in args[1:] if arg.lower() not in ("s", "c")]
+        video_path = remaining_args[0] if remaining_args else None
 
     # The CLI simply asks the registry for an exercise — it knows nothing about
     # which exercises exist. GymEngine stays completely unaware of the registry.
@@ -40,6 +52,13 @@ def main():
     exercise = (
         registry.get(exercise_key) if exercise_key else registry.get(DEFAULT_EXERCISE)
     )
+
+    if video_path:
+        import os
+        if not os.path.exists(video_path):
+            alt_path = os.path.join("videos", video_path)
+            if os.path.exists(alt_path):
+                video_path = alt_path
 
     GymEngine(
         exercise,

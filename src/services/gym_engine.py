@@ -13,6 +13,7 @@ from ..exercises.exercise import Exercise
 from ..exercises.validation import ValidationResult, validate_all, violations
 from ..utils.geometry import ComputedAngle, calc_angle, get_points
 from ..utils.render import draw_angle_arc, draw_angle_labels, draw_skeleton, draw_stats, fit_to_screen
+from ..utils.camera_side import CameraSideDetector
 from .pose_service import PoseService
 from .rep_counter import RepCounter
 from .rep_judge import RepJudge
@@ -50,12 +51,25 @@ class GymEngine:
         # Optional maximum display width (e.g. DISPLAY_MAX_WIDTH). The frame is
         # first auto-fit to the detected screen; this only caps it further.
         self.display_width = display_width
+        self.side_detector = CameraSideDetector(30) if exercise.camera == "side" else None
+        self.rules_adapted = False if exercise.camera == "side" else True
 
     # ------------------------------------------------------------------
     # Analysis: pure logic, no I/O -> easy to unit test with fake landmarks.
     # ------------------------------------------------------------------
     def analyze(self, landmarks, width: int, height: int, frame: int) -> FrameResult:
         """Compute angles, update the counter, run validation, and judge reps."""
+        if self.side_detector and not self.rules_adapted:
+            side = self.side_detector.process_frame(landmarks)
+            if side:
+                from ..utils.camera_side import adapt_rules
+                self.exercise.counter_rules = adapt_rules(self.exercise.counter_rules, side)
+                self.exercise.validation_rules = adapt_rules(self.exercise.validation_rules, side)
+                self.counter = RepCounter(self.exercise.counter_rules)
+                self.rules_adapted = True
+            if not self.rules_adapted:
+                return FrameResult(angles={}, states=self.counter.states, results=[], views=[])
+
         angles = {}
         views = []  # unified per-rule angle views for the renderer
 
@@ -67,7 +81,7 @@ class GymEngine:
             # Counter angles are never "failed" -> drawn with the highlight colour.
             views.append(ComputedAngle(name=rule.name, vertex=vertex, angle=angle, is_error=False))
 
-        results = validate_all(self.exercise.validation_rules, landmarks, width, height)
+        results = validate_all(self.exercise.validation_rules, landmarks, width, height, states=self.counter.states)
 
         for res in results:
             pts = get_points(res.joints, landmarks, width, height)
@@ -76,18 +90,35 @@ class GymEngine:
                 ComputedAngle(name=res.rule_name, vertex=vertex, angle=res.angle, is_error=not res.passed)
             )
 
-        # ── Rep quality tracking (orchestration only) ──────────────────
-        # GymEngine feeds validation results to the judge every frame and tells
-        # the judge when a rep completed. Completion is detected here by reading
-        # RepCounter's rep count -- RepCounter remains the sole authority on
-        # counting and is never told about validation. All GOOD/BAD logic lives
-        # in RepJudge, so nothing in this class decides rep quality.
-        self.judge.observe(results, frame)
-
+        # ── Rep quality tracking ───────────────────────────────────────
+        # RepCounter owns counting AND quality (good/bad) decisions.
+        # Pass violation_names (set of failing rule names) — not a single global
+        # bool — so each counter rule only accumulates violations for its own joints.
+        violation_names = {r.rule_name for r in violations(results)}
+        prev_good  = self.counter.primary.good
         prev_count = self.counter.primary.count
-        self.counter.update(angles)  # RepCounter detects completion
+
+        self.counter.update(angles, violation_names)
+
         if self.counter.primary.count > prev_count:
-            self.judge.finalize_rep(self.counter.primary.count, frame)
+            rep_was_good = self.counter.primary.good > prev_good
+            if self.counter.primary.speed_warning:
+                # Inject a speed violation warning
+                from ..exercises.validation import ValidationResult
+                self.judge.observe([
+                    ValidationResult(
+                        rule_name=self.exercise.counter_rules[0].name + "_too_fast",
+                        message="Too fast — control the movement",
+                        severity="warning",
+                        passed=False,
+                        angle=None
+                    )
+                ], frame)
+            self.judge.finalize_rep(
+                self.counter.primary.count,
+                frame,
+                force_good=rep_was_good,
+            )
 
         return FrameResult(
             angles=angles, states=self.counter.states, results=results, views=views
@@ -102,10 +133,37 @@ class GymEngine:
 
         # Skeleton for every joint set the exercise cares about.
         if show.show_skeleton:
-            for rule in self.exercise.counter_rules + self.exercise.validation_rules:
+            drawn_joints = set()
+            for rule in self.exercise.counter_rules:
                 pts = get_points(rule.joints, landmarks, width, height)
                 if len(pts) >= 3:
-                    draw_skeleton(frame, pts, self.colors, is_bad=bad)
+                    custom_color = None
+                    if bad:
+                        custom_color = self.colors.ERROR
+                    elif hasattr(rule, 'rom_min_angle') and rule.rom_min_angle is not None:
+                        state = self.counter.states.get(rule.name)
+                        if state is not None:
+                            # Only show RED/GREEN feedback when actively in a rep
+                            # (DOWN or RETURNING stage). At UP/rest, use default color.
+                            if state.stage in (rule.up_stage,):
+                                custom_color = None  # resting — default white
+                            elif state.reached_bottom:
+                                custom_color = self.colors.HIGHLIGHT   # GREEN — depth reached
+                            else:
+                                custom_color = self.colors.ERROR        # RED — need to go deeper
+                    draw_skeleton(frame, pts, self.colors, is_bad=bad, custom_color=custom_color)
+                    drawn_joints.add(tuple(sorted(rule.joints)))
+
+            # Validation-rule skeletons (e.g. back angle for deadlift).
+            # Can be suppressed per-exercise via DisplaySettings.show_validation_skeleton.
+            if show.show_validation_skeleton:
+                for rule in self.exercise.validation_rules:
+                    joints_key = tuple(sorted(rule.joints))
+                    if joints_key not in drawn_joints:
+                        pts = get_points(rule.joints, landmarks, width, height)
+                        if len(pts) >= 3:
+                            draw_skeleton(frame, pts, self.colors, is_bad=bad)
+                            drawn_joints.add(joints_key)
 
         # Live angle arcs for each counter rule (visual only; the numeric
         # value is drawn by draw_angle_labels for EVERY computed angle).
@@ -131,6 +189,14 @@ class GymEngine:
             else "BAD" if last is not None
             else "—"
         )
+        display_stage = primary.stage
+        if self.exercise.counter_rules:
+            rule = self.exercise.counter_rules[0]
+            if primary.stage == "up":
+                display_stage = rule.up_stage
+            elif primary.stage == "down":
+                display_stage = rule.down_stage
+
         draw_stats(
             frame,
             exercise_name=self.exercise.name,
@@ -138,7 +204,7 @@ class GymEngine:
             good_reps=self.judge.good_reps,
             bad_reps=self.judge.bad_reps,
             current_rep=current_rep,
-            stage=primary.stage,
+            stage=display_stage,
             angle=primary.angle,
             feedback=feedback,
             colors=self.colors,
@@ -168,6 +234,8 @@ class GymEngine:
     def run(self, video_path: str | None = None):
         if settings.USE_WEBCAM:
             cap = cv2.VideoCapture(settings.WEBCAM_INDEX)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         else:
             src = video_path or settings.VIDEO_PATH
             cap = cv2.VideoCapture(str(src) if src is not None else None)

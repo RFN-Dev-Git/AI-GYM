@@ -14,8 +14,9 @@ class DisplaySettings:
     exercise logic. All fields are optional with safe defaults.
     """
 
-    show_angle_arc: bool = True
+    show_angle_arc: bool = False
     show_skeleton: bool = True
+    show_validation_skeleton: bool = True  # set False to hide validation-rule joints
 
 
 @dataclass
@@ -42,3 +43,4 @@ class Exercise:
     validation_rules: list[AngleValidationRule] = field(default_factory=list)
     display: DisplaySettings = field(default_factory=DisplaySettings)
     metadata: dict[str, Any] = field(default_factory=dict)
+    camera: str = "both"

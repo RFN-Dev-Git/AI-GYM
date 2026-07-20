@@ -9,18 +9,19 @@ from ..rules import AngleCounterRule, AngleValidationRule
 @dataclass
 class HackSquatExercise(Exercise):
     name: str = "Hack Squat"
+    camera: str = "side"
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
             AngleCounterRule(
                 name="knee_left",
                 joints=PoseSegments.LEFT_LEG,
-                up_angle=160,
+                up_angle=130,
                 down_angle=90,
             ),
             AngleCounterRule(
                 name="knee_right",
                 joints=PoseSegments.RIGHT_LEG,
-                up_angle=160,
+                up_angle=130,
                 down_angle=90,
             ),
         ]
@@ -30,18 +31,18 @@ class HackSquatExercise(Exercise):
             AngleValidationRule(
                 name="knee_unlocked_left",
                 joints=PoseSegments.LEFT_LEG,
-                min_angle=65,
-                max_angle=165,
+                min_angle=60,
+                max_angle=170,
                 message="Don't lock your left knee",
-                severity="error",
+                severity="warning",
             ),
             AngleValidationRule(
                 name="knee_unlocked_right",
                 joints=PoseSegments.RIGHT_LEG,
-                min_angle=65,
-                max_angle=165,
+                min_angle=60,
+                max_angle=170,
                 message="Don't lock your right knee",
-                severity="error",
+                severity="warning",
             )
         ]
     )

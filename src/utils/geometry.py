@@ -35,5 +35,11 @@ def calc_angle(a, b, c):
     return math.degrees(math.acos(cos_theta))
 
 
-def get_points(indices, landmarks, w, h):
-    return [(int(landmarks[i].x * w), int(landmarks[i].y * h)) for i in indices]
+def get_points(indices, landmarks, w, h, threshold: float = 0.5):
+    pts = []
+    for i in indices:
+        lm = landmarks[i]
+        if hasattr(lm, "visibility") and lm.visibility < threshold:
+            continue
+        pts.append((int(lm.x * w), int(lm.y * h)))
+    return pts

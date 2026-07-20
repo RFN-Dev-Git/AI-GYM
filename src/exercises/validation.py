@@ -10,12 +10,15 @@ from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 from ..utils.geometry import calc_angle, get_points
-from .rules import AngleValidationRule
+from .rules import AngleValidationRule, AngleROMValidationRule
+
+_STAGE_DOWN      = "down"
+_STAGE_RETURNING = "returning"
 
 
 @dataclass
 class ValidationResult:
-    """Outcome of evaluating a single AngleValidationRule on one frame."""
+    """Outcome of evaluating a single rule on one frame."""
 
     rule_name: str
     message: str
@@ -28,21 +31,7 @@ class ValidationResult:
 def evaluate_rule(
     rule: AngleValidationRule, landmarks, width: int, height: int
 ) -> ValidationResult:
-    """Evaluate one angle-based AngleValidationRule against the detected pose.
-
-    EXTENSION POINT
-    ----------------
-    Today every AngleValidationRule is angle-based, so we just measure the angle at
-    ``rule.joints``. To support the future rule kinds from the brief
-    (distance-based, alignment, symmetry, richer feedback) you only need to:
-
-        1. add a new rule dataclass in ``rules.py``
-           (e.g. ``DistanceValidationRule``), and
-        2. branch on its type here (``isinstance`` or a ``kind`` field).
-
-    GymEngine calls ``validate_all`` and reads ``ValidationResult`` objects, so
-    **it does not change** when a new rule kind appears.
-    """
+    """Evaluate one angle-based AngleValidationRule against the detected pose."""
     pts = get_points(rule.joints, landmarks, width, height)
     angle = calc_angle(*pts) if len(pts) >= 3 else None
     # Preserve the prior behaviour for the pass/fail decision: when the angle
@@ -55,11 +44,54 @@ def evaluate_rule(
     )
 
 
+def evaluate_rom_rule(
+    rule: AngleROMValidationRule,
+    landmarks,
+    width: int,
+    height: int,
+    state,
+) -> ValidationResult:
+    """Evaluate a ROMValidationRule using the live RepState."""
+    pts = get_points(rule.joints, landmarks, width, height)
+    angle = calc_angle(*pts) if len(pts) >= 3 else None
+
+    if angle is None:
+        return ValidationResult(rule.name, rule.message, rule.severity, True, None, joints=rule.joints)
+
+    if state is None:
+        return ValidationResult(rule.name, rule.message, rule.severity, True, angle, joints=rule.joints)
+
+    if state.stage == _STAGE_DOWN and not getattr(state, "reached_bottom", False):
+        msg = f"Go deeper — target <= {int(rule.min_rom_angle)} deg"
+        return ValidationResult(rule.name, msg, rule.severity, False, angle, joints=rule.joints)
+
+    if state.stage == _STAGE_RETURNING:
+        msg = f"Extend fully — target >= {int(rule.max_rom_angle)} deg"
+        return ValidationResult(rule.name, msg, rule.severity, False, angle, joints=rule.joints)
+
+    return ValidationResult(rule.name, rule.message, rule.severity, True, angle, joints=rule.joints)
+
+
 def validate_all(
-    rules: Iterable[AngleValidationRule], landmarks, width: int, height: int
+    rules: Iterable,
+    landmarks,
+    width: int,
+    height: int,
+    states: dict | None = None,
 ) -> list[ValidationResult]:
-    """Run every validation rule; order matches the input list."""
-    return [evaluate_rule(rule, landmarks, width, height) for rule in rules]
+    """Run every validation rule; dispatches on rule type.
+
+    ``states`` is only needed for AngleROMValidationRule; it may be omitted for
+    exercises that only use plain AngleValidationRules.
+    """
+    results = []
+    for rule in rules:
+        if isinstance(rule, AngleROMValidationRule):
+            state = (states or {}).get(rule.name)
+            results.append(evaluate_rom_rule(rule, landmarks, width, height, state))
+        else:
+            results.append(evaluate_rule(rule, landmarks, width, height))
+    return results
 
 
 def violations(results: Sequence[ValidationResult]) -> list[ValidationResult]:
