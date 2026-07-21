@@ -9,7 +9,6 @@ AI-GYM/
 │   │   ├── pose_landmarker_full.task
 │   │   └── pose_landmarker_lite.task
 │   └── videos
-│       ├── .gitkeep
 │       ├── Chest.mp4
 │       ├── Deadlift .png
 │       ├── Deadlift.mp4
@@ -19,9 +18,15 @@ AI-GYM/
 │       ├── leg.mp4
 │       └── leg2.mp4
 ├── output
-│   └── sessions
-│       ├── Hack_Squat_20260713_012947.json
-│       └── Hack_Squat_20260713_013018.json
+│   ├── sessions
+│   │   ├── Hack_Squat_20260713_012947.json
+│   │   ├── Hack_Squat_20260713_013018.json
+│   │   ├── Hack_Squat_20260716_111811.json
+│   │   ├── Hack_Squat_20260716_112114.json
+│   │   ├── Hack_Squat_20260716_112451.json
+│   │   └── Hack_Squat_20260719_173638.json
+│   └── videos
+│       └── result.mp4
 ├── src
 │   ├── analytics
 │   │   ├── __init__.py
@@ -54,12 +59,14 @@ AI-GYM/
 │   │   └── validation.py
 │   ├── services
 │   │   ├── __init__.py
+│   │   ├── additional_casses.py
 │   │   ├── gym_engine.py
 │   │   ├── pose_service.py
 │   │   ├── rep_counter.py
 │   │   └── rep_judge.py
 │   ├── utils
 │   │   ├── __init__.py
+│   │   ├── camera_side.py
 │   │   ├── geometry.py
 │   │   └── render.py
 │   ├── __init__.py
@@ -71,7 +78,8 @@ AI-GYM/
 ├── codex
 ├── Makefile
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── term
 ```
 
 ## SOURCE FILES
@@ -599,6 +607,11 @@ class PoseSegments:
     # Flags when the elbow drops below the shoulder line.
     LEFT_ELBOW_ELEVATION  = (L_HIP, L_SHOULDER, L_ELBOW)
     RIGHT_ELBOW_ELEVATION = (R_HIP, R_SHOULDER, R_ELBOW)
+
+    # Arm direction: Hip -> Shoulder -> Elbow (Shoulder Press)
+    # Checks if arm is extended upward (pressing) vs downward (resting).
+    LEFT_ARM_DIRECTION  = (L_HIP, L_SHOULDER, L_ELBOW)
+    RIGHT_ARM_DIRECTION = (R_HIP, R_SHOULDER, R_ELBOW)
 ```
 
 ---
@@ -633,18 +646,19 @@ from ..rules import AngleCounterRule, AngleValidationRule
 @dataclass
 class HackSquatExercise(Exercise):
     name: str = "Hack Squat"
+    camera: str = "side"
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
             AngleCounterRule(
                 name="knee_left",
                 joints=PoseSegments.LEFT_LEG,
-                up_angle=160,
+                up_angle=130,
                 down_angle=90,
             ),
             AngleCounterRule(
                 name="knee_right",
                 joints=PoseSegments.RIGHT_LEG,
-                up_angle=160,
+                up_angle=130,
                 down_angle=90,
             ),
         ]
@@ -654,16 +668,16 @@ class HackSquatExercise(Exercise):
             AngleValidationRule(
                 name="knee_unlocked_left",
                 joints=PoseSegments.LEFT_LEG,
-                min_angle=65,
-                max_angle=165,
+                min_angle=60,
+                max_angle=170,
                 message="Don't lock your left knee",
                 severity="warning",
             ),
             AngleValidationRule(
                 name="knee_unlocked_right",
                 joints=PoseSegments.RIGHT_LEG,
-                min_angle=65,
-                max_angle=165,
+                min_angle=60,
+                max_angle=170,
                 message="Don't lock your right knee",
                 severity="warning",
             )
@@ -682,53 +696,77 @@ class HackSquatExercise(Exercise):
 ### FILE: [src/exercises/leg/leg_press.py](src/exercises/leg/leg_press.py)
 
 ```py
-"""Leg Press exercise configuration (self-contained)."""
+"""Leg Press exercise configuration (self-contained).
+
+Counting logic:
+  - DOWN phase: knee angle <= 110° (user is bending)
+  - RETURNING: angle crosses back above 120°
+  - Rep completes when angle >= 160° (fully extended)
+
+ROM quality:
+  - GOOD rep: must reach <= 80° at the bottom AND >= 160° at the top
+  - BAD rep:  counted if the user reverses before reaching either extreme
+
+Skeleton color:
+  - Default (white) while at rest (UP stage, before rep starts)
+  - RED while descending/returning but bottom not yet reached
+  - GREEN once the bottom extreme (<= 80°) has been reached this rep
+"""
 
 from dataclasses import dataclass, field
 
 from ...core.pose_segments import PoseSegments
-from ..exercise import Exercise
-from ..rules import AngleCounterRule, AngleValidationRule
+from ..exercise import Exercise, DisplaySettings
+from ..rules import AngleCounterRule, AngleROMValidationRule
+
 
 @dataclass
 class LegPressExercise(Exercise):
     name: str = "Leg Press"
+    camera: str = "side"
+
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
             AngleCounterRule(
                 name="knee_left",
                 joints=PoseSegments.LEFT_LEG,
-                up_angle=160,
-                down_angle=90,
+                up_angle=120,       # crosses this going back up → RETURNING phase
+                down_angle=110,     # <= 110° = DOWN phase begins
+                rom_min_angle=80,   # must reach <= 80° for a GOOD rep (deep enough)
+                rom_max_angle=160,  # must reach >= 160° for a GOOD rep (full extension)
             ),
             AngleCounterRule(
                 name="knee_right",
                 joints=PoseSegments.RIGHT_LEG,
-                up_angle=160,
-                down_angle=90,
+                up_angle=120,
+                down_angle=110,
+                rom_min_angle=80,
+                rom_max_angle=160,
             ),
         ]
     )
-    validation_rules: list[AngleValidationRule] = field(
+
+    validation_rules: list[AngleROMValidationRule] = field(
         default_factory=lambda: [
-            AngleValidationRule(
-                name="knee_unlocked_left",
+            AngleROMValidationRule(
+                name="knee_left",
                 joints=PoseSegments.LEFT_LEG,
-                min_angle=0,
-                max_angle=170,
-                message="Don't lock your left knee",
+                min_rom_angle=80,
+                max_rom_angle=160,
+                message="Full range: bend to 80° and extend to 160°",
                 severity="warning",
             ),
-            AngleValidationRule(
-                name="knee_unlocked_right",
+            AngleROMValidationRule(
+                name="knee_right",
                 joints=PoseSegments.RIGHT_LEG,
-                min_angle=0,
-                max_angle=170,
-                message="Don't lock your right knee",
+                min_rom_angle=80,
+                max_rom_angle=160,
+                message="Full range: bend to 80° and extend to 160°",
                 severity="warning",
-            )
+            ),
         ]
     )
+
     metadata: dict = field(
         default_factory=lambda: {
             "description": "Machine-based lower-body pushing exercise.",
@@ -742,55 +780,7 @@ class LegPressExercise(Exercise):
 ### FILE: [src/exercises/__init__.py](src/exercises/__init__.py)
 
 ```py
-"""Exercise configuration package.
 
-Everything in here is *data*, not behaviour. An exercise is described entirely
-by an :class:`Exercise` instance built from :class:`AngleCounterRule` and
-:class:`AngleValidationRule` dataclasses. GymEngine consumes these objects and never
-needs to know which exercise it is running.
-
-Each exercise lives in its own module (``pushup.py``, ``squat.py``, ...); this
-package re-exports them so callers can do ``from src.exercises import
-PushUpExercise`` without knowing the internal file layout. Adding a new exercise
-= adding one new self-contained module + one import line below. No engine code
-changes.
-"""
-
-from .biceps_curl import BicepsCurlExercise
-from .cable_chest_fly import CableChestFlyExercise
-from .deadlift import DeadliftExercise
-from .exercise import DisplaySettings, Exercise
-from .latpulldown import LatPulldownExercise
-from .leg import HackSquatExercise, LegPressExercise
-from .pushup import PushUpExercise
-from .registry import ExerciseRegistry, UnknownExerciseError, registry
-from .rules import AngleCounterRule, AngleValidationRule
-from .shoulder_press import ShoulderPressExercise
-from .squat import SquatExercise
-from .validation import ValidationResult, validate_all, violations
-
-__all__ = [
-    "AngleCounterRule",
-    "AngleValidationRule",
-    "Exercise",
-    "DisplaySettings",
-    "ValidationResult",
-    "validate_all",
-    "violations",
-    "PushUpExercise",
-    "SquatExercise",
-    "LegPressExercise",
-    "HackSquatExercise", 
-    "ShoulderPressExercise",
-    "BicepsCurlExercise",
-    "LatPulldownExercise",
-    "DeadliftExercise",
-    "CableChestFlyExercise",
-    # Registry
-    "registry",
-    "ExerciseRegistry",
-    "UnknownExerciseError",
-]
 ```
 
 ---
@@ -798,52 +788,108 @@ __all__ = [
 ### FILE: [src/exercises/biceps_curl.py](src/exercises/biceps_curl.py)
 
 ```py
-"""Biceps Curl exercise configuration (self-contained)."""
+"""Biceps Curl exercise configuration (self-contained).
+
+Counting logic (LEFT_ARM — Shoulder → Elbow → Wrist angle):
+  - UP stage:   angle >= 150° (arm extended / hanging down)
+  - DOWN stage: angle <= 90°  (arm curled up toward shoulder)
+  - A rep counts when the user goes DOWN → UP (curled → extended)
+  - GOOD rep: must reach <= 60° at the curl AND >= 150° at the extension
+
+Validation rules:
+  1. elbow_too_tight: angle must stay >= 30° — if lower than 30° the forearm
+     is jammed too close, losing bicep tension (bad form).
+  2. elbow_hyperextended: angle must stay <= 170° — if higher than 170° the
+     elbow is hyperextended or locked out too straight (wrong position).
+  3. elbow_drift: Hip → Shoulder → Elbow angle must stay <= 15°.
+     If the elbow drifts forward, the front shoulder takes over and bicep tension drops.
+
+Speed check:
+  - min_rep_frames=18 (~0.7 s at 25 fps). Reps faster than this are marked BAD.
+
+Only ARM joints are drawn on screen (show_validation_skeleton=False).
+"""
 
 from dataclasses import dataclass, field
 
-from ..core.pose_segments import PoseSegments
-from .exercise import Exercise
+from ..core.pose_segments import PoseSegments, L_HIP, L_SHOULDER, L_ELBOW
+from .exercise import Exercise, DisplaySettings
 from .rules import AngleCounterRule, AngleValidationRule
+
+
+# Hip → Shoulder → Elbow: detects elbow drift / forward swing
+_LEFT_ELBOW_DRIFT = (L_HIP, L_SHOULDER, L_ELBOW)
 
 
 @dataclass
 class BicepsCurlExercise(Exercise):
     name: str = "Biceps Curl"
+    camera: str = "side"
+
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
             AngleCounterRule(
                 name="elbow",
-                joints=PoseSegments.LEFT_ARM,
-                up_angle=160,
-                down_angle=30,
+                joints=PoseSegments.LEFT_ARM,   # Shoulder → Elbow → Wrist
+                up_angle=139,                   # arm extended — UP stage (angle >= 150)
+                down_angle=90,                  # arm curled — DOWN stage (angle <= 90)
+                up_stage="down",                # map large angle (extension) to "down"
+                down_stage="up",                # map small angle (curl peak) to "up"
+                rom_min_angle=150,               # must reach <= 60° for a GOOD rep
+                rom_max_angle=50,              # must reach >= 150° for a GOOD rep
+                min_rep_frames=12,              # < 12 frames = too fast → BAD
             ),
         ]
     )
+
     validation_rules: list[AngleValidationRule] = field(
         default_factory=lambda: [
+            # ── Form check 1: elbow angle must stay above 30° ──────────
             AngleValidationRule(
-                name="back_straight",
-                joints=PoseSegments.LEFT_TORSO,
-                min_angle=150,
+                name="elbow_too_tight",
+                joints=PoseSegments.LEFT_ARM,
+                min_angle=30,
                 max_angle=180,
-                message="Keep your back straight",
-                severity="error",
+                message="Don't curl too tight — keep elbow above 30°",
+                severity="warning",
             ),
+            # ── Form check 2: elbow angle must stay below 170° ─────────
             AngleValidationRule(
-                name="elbow_unlocked",
+                name="elbow_hyperextended",
                 joints=PoseSegments.LEFT_ARM,
                 min_angle=0,
                 max_angle=170,
-                message="Don't lock your elbows",
+                message="Don't lock or hyperextend your elbow (keep below 170°)",
+                severity="warning",
+            ),
+            # ── Form check 3: elbow drift (Hip → Shoulder → Elbow) ─────
+            # Upper arm stays vertical (parallel to torso) — angle <= 15°.
+            AngleValidationRule(
+                name="elbow_drift",
+                joints=_LEFT_ELBOW_DRIFT,
+                min_angle=0,
+                max_angle=20,
+                message="Keep elbow pinned to your side (drift < 20°)",
                 severity="warning",
             ),
         ]
     )
+
+    # Only draw the arm skeleton — the drift validation joints (Hip→Shoulder→Elbow)
+    # would add a distracting second skeleton if allowed to render.
+    display: DisplaySettings = field(
+        default_factory=lambda: DisplaySettings(show_validation_skeleton=False)
+    )
+
     metadata: dict = field(
         default_factory=lambda: {
-            "description": "Isolation exercise for the biceps.",
-            "muscle_groups": ["biceps", "forearms"],
+            "description": "Isolation dumbbell exercise for the biceps brachii.",
+            "muscle_groups": ["biceps brachii", "brachialis", "brachioradialis"],
+            "technique_notes": (
+                "Keep the upper arm stationary and elbow pinned to your side (drift < 15°). "
+                "Full extension at the bottom (~150° - 170°) and full curl at the top (30° - 60°). "
+                "Controlled tempo — avoid ballistic / momentum-driven reps."
+            ),
         }
     )
 ```
@@ -920,6 +966,7 @@ from .rules import AngleCounterRule, AngleValidationRule
 @dataclass
 class DeadliftExercise(Exercise):
     name: str = "Deadlift: Dissected"
+    camera: str = "side"
 
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
@@ -986,8 +1033,9 @@ class DisplaySettings:
     exercise logic. All fields are optional with safe defaults.
     """
 
-    show_angle_arc: bool = True
+    show_angle_arc: bool = False
     show_skeleton: bool = True
+    show_validation_skeleton: bool = True  # set False to hide validation-rule joints
 
 
 @dataclass
@@ -1014,6 +1062,7 @@ class Exercise:
     validation_rules: list[AngleValidationRule] = field(default_factory=list)
     display: DisplaySettings = field(default_factory=DisplaySettings)
     metadata: dict[str, Any] = field(default_factory=dict)
+    camera: str = "both"
 ```
 
 ---
@@ -1033,6 +1082,7 @@ from .rules import AngleCounterRule, AngleValidationRule
 @dataclass
 class LatPulldownExercise(Exercise):
     name: str = "Lat Pulldown"
+    camera: str = "side"
 
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
@@ -1105,6 +1155,7 @@ from .rules import AngleCounterRule, AngleValidationRule
 @dataclass
 class PushUpExercise(Exercise):
     name: str = "Push-Up"
+    camera: str = "side"
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
             AngleCounterRule(
@@ -1274,6 +1325,8 @@ class AngleCounterRule:
         down_angle:  Angle (deg) that marks the "down" / bottom of a rep.
         up_stage:    Label applied while at/above ``up_angle`` (default "up").
         down_stage:  Label applied while at/below ``down_angle`` (default "down").
+        sync_group:  Optional group name for synchronized multi-rule counting.
+                     Rules with the same sync_group must reach thresholds together.
 
     ``up_stage`` / ``down_stage`` exist so the stage vocabulary is configurable
     ("up"/"down" today, but a future exercise could use different labels or a
@@ -1286,6 +1339,10 @@ class AngleCounterRule:
     down_angle: float
     up_stage: str = "up"
     down_stage: str = "down"
+    rom_min_angle: float | None = None
+    rom_max_angle: float | None = None
+    min_rep_frames: int = 0   # minimum frames a rep must span (0 = no check)
+    sync_group: str | None = None  # optional synchronization group
 
 
 @dataclass(frozen=True)
@@ -1311,6 +1368,54 @@ class AngleValidationRule:
     max_angle: float
     message: str
     severity: Severity = "error"
+
+
+@dataclass(frozen=True)
+class AngleROMValidationRule:
+    """Describes a stateful Range of Motion (ROM) validation rule.
+
+    Attributes:
+        name:          Stable id matching the corresponding CounterRule name.
+        joints:        Three pose-landmark indices forming the measured angle.
+        min_rom_angle: Bottom angle threshold (deg) that must be reached.
+        max_rom_angle: Top angle threshold (deg) that must be reached.
+        message:       Human-readable coaching cue shown when the rule fails.
+        severity:      "error" | "warning" | "info" — drives feedback emphasis.
+    """
+
+    name: str
+    joints: tuple[int, int, int]
+    min_rom_angle: float
+    max_rom_angle: float
+    message: str
+    severity: Severity = "error"
+
+
+@dataclass(frozen=True)
+class DistanceValidationRule:
+    """Describes a validation rule based on distance between two landmarks.
+
+    Attributes:
+        name:         Stable id.
+        point1:       First landmark index.
+        point2:       Second landmark index.
+        min_ratio:    Minimum acceptable ratio (point1-point2 distance / reference distance).
+        max_ratio:    Maximum acceptable ratio (point1-point2 distance / reference distance).
+        reference1:   First reference landmark index for ratio calculation.
+        reference2:   Second reference landmark index for ratio calculation.
+        message:      Human-readable coaching cue shown when the rule fails.
+        severity:     "error" | "warning" | "info" — drives feedback emphasis.
+    """
+
+    name: str
+    point1: int
+    point2: int
+    min_ratio: float
+    max_ratio: float
+    reference1: int
+    reference2: int
+    message: str
+    severity: Severity = "error"
 ```
 
 ---
@@ -1324,39 +1429,87 @@ from dataclasses import dataclass, field
 
 from ..core.pose_segments import PoseSegments
 from .exercise import Exercise
-from .rules import AngleCounterRule, AngleValidationRule
+from .rules import (
+    AngleCounterRule,
+    AngleValidationRule,
+    AngleROMValidationRule,
+    DistanceValidationRule,
+)
 
 
 @dataclass
 class ShoulderPressExercise(Exercise):
     name: str = "Shoulder Press"
+    camera: str = "both"
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
+            # Use elbow angles for stage detection (up/down)
+            # Stage changes at 90°: >90 = up, <90 = down
+            # Using LEFT_ARM (shoulder-elbow-wrist) so only arm points are shown in skeleton
             AngleCounterRule(
-                name="elbow",
+                name="left_shoulder",
                 joints=PoseSegments.LEFT_ARM,
-                up_angle=160,
-                down_angle=60,
+                up_angle=91,   # Trigger up stage when > 90
+                down_angle=89,  # Trigger down stage when < 90
+                sync_group="shoulder_press",
+            ),
+            AngleCounterRule(
+                name="right_shoulder",
+                joints=PoseSegments.RIGHT_ARM,
+                up_angle=91,   # Trigger up stage when > 90
+                down_angle=89,  # Trigger down stage when < 90
+                sync_group="shoulder_press",
             ),
         ]
     )
-    validation_rules: list[AngleValidationRule] = field(
+    validation_rules: list = field(
         default_factory=lambda: [
-            AngleValidationRule(
-                name="back_straight",
-                joints=PoseSegments.LEFT_TORSO,
-                min_angle=150,
-                max_angle=180,
-                message="Keep your back straight",
+            # ROM validation for shoulder angles
+            AngleROMValidationRule(
+                name="left_shoulder_rom",
+                joints=PoseSegments.LEFT_ARM_DIRECTION,
+                min_rom_angle=40,
+                max_rom_angle=160,
+                message="Shoulder: Reach 160° up, 40-80° down",
                 severity="error",
             ),
-            AngleValidationRule(
-                name="elbow_unlocked",
+            AngleROMValidationRule(
+                name="right_shoulder_rom",
+                joints=PoseSegments.RIGHT_ARM_DIRECTION,
+                min_rom_angle=40,
+                max_rom_angle=160,
+                message="Shoulder: Reach 160° up, 40-80° down",
+                severity="error",
+            ),
+            # ROM validation for elbow angles
+            AngleROMValidationRule(
+                name="left_elbow_rom",
                 joints=PoseSegments.LEFT_ARM,
-                min_angle=0,
-                max_angle=170,
-                message="Don't lock your elbows",
-                severity="warning",
+                min_rom_angle=60,
+                max_rom_angle=170,
+                message="Elbow: Reach 170° up, 60° down",
+                severity="error",
+            ),
+            AngleROMValidationRule(
+                name="right_elbow_rom",
+                joints=PoseSegments.RIGHT_ARM,
+                min_rom_angle=60,
+                max_rom_angle=170,
+                message="Elbow: Reach 170° up, 60° down",
+                severity="error",
+            ),
+            # Distance validation: wrists should be at least shoulder-width apart
+            # Name starts with counter rule name to auto-poison reps
+            DistanceValidationRule(
+                name="left_shoulder_wrist_distance",
+                point1=15,  # Left wrist
+                point2=16,  # Right wrist
+                min_ratio=1.2,  # Must be at least 1.2x shoulder width (stricter)
+                max_ratio=3.0,
+                reference1=11,  # Left shoulder
+                reference2=12,  # Right shoulder
+                message="Keep wrists wider than shoulders",
+                severity="error",
             ),
         ]
     )
@@ -1385,6 +1538,7 @@ from .rules import AngleCounterRule, AngleValidationRule
 @dataclass
 class SquatExercise(Exercise):
     name: str = "Squat"
+    camera: str = "side"
     counter_rules: list[AngleCounterRule] = field(
         default_factory=lambda: [
             AngleCounterRule(
@@ -1439,13 +1593,16 @@ modification when new rule *kinds* are added later (see EXTENSION POINT below).
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
-from ..utils.geometry import calc_angle, get_points
-from .rules import AngleValidationRule
+from ..utils.geometry import calc_angle, get_points, calc_distance
+from .rules import AngleValidationRule, AngleROMValidationRule, DistanceValidationRule
+
+_STAGE_DOWN      = "down"
+_STAGE_RETURNING = "returning"
 
 
 @dataclass
 class ValidationResult:
-    """Outcome of evaluating a single AngleValidationRule on one frame."""
+    """Outcome of evaluating a single rule on one frame."""
 
     rule_name: str
     message: str
@@ -1458,21 +1615,7 @@ class ValidationResult:
 def evaluate_rule(
     rule: AngleValidationRule, landmarks, width: int, height: int
 ) -> ValidationResult:
-    """Evaluate one angle-based AngleValidationRule against the detected pose.
-
-    EXTENSION POINT
-    ----------------
-    Today every AngleValidationRule is angle-based, so we just measure the angle at
-    ``rule.joints``. To support the future rule kinds from the brief
-    (distance-based, alignment, symmetry, richer feedback) you only need to:
-
-        1. add a new rule dataclass in ``rules.py``
-           (e.g. ``DistanceValidationRule``), and
-        2. branch on its type here (``isinstance`` or a ``kind`` field).
-
-    GymEngine calls ``validate_all`` and reads ``ValidationResult`` objects, so
-    **it does not change** when a new rule kind appears.
-    """
+    """Evaluate one angle-based AngleValidationRule against the detected pose."""
     pts = get_points(rule.joints, landmarks, width, height)
     angle = calc_angle(*pts) if len(pts) >= 3 else None
     # Preserve the prior behaviour for the pass/fail decision: when the angle
@@ -1485,11 +1628,83 @@ def evaluate_rule(
     )
 
 
+def evaluate_rom_rule(
+    rule: AngleROMValidationRule,
+    landmarks,
+    width: int,
+    height: int,
+    state,
+) -> ValidationResult:
+    """Evaluate a ROMValidationRule using the live RepState."""
+    pts = get_points(rule.joints, landmarks, width, height)
+    angle = calc_angle(*pts) if len(pts) >= 3 else None
+
+    if angle is None:
+        return ValidationResult(rule.name, rule.message, rule.severity, True, None, joints=rule.joints)
+
+    if state is None:
+        return ValidationResult(rule.name, rule.message, rule.severity, True, angle, joints=rule.joints)
+
+    if state.stage == _STAGE_DOWN and not getattr(state, "reached_bottom", False):
+        msg = f"Go deeper — target <= {int(rule.min_rom_angle)} deg"
+        return ValidationResult(rule.name, msg, rule.severity, False, angle, joints=rule.joints)
+
+    if state.stage == _STAGE_RETURNING:
+        msg = f"Extend fully — target >= {int(rule.max_rom_angle)} deg"
+        return ValidationResult(rule.name, msg, rule.severity, False, angle, joints=rule.joints)
+
+    return ValidationResult(rule.name, rule.message, rule.severity, True, angle, joints=rule.joints)
+
+
+def evaluate_distance_rule(
+    rule: DistanceValidationRule,
+    landmarks,
+    width: int,
+    height: int,
+) -> ValidationResult:
+    """Evaluate a DistanceValidationRule based on distance ratios."""
+    pts1 = get_points([rule.point1, rule.point2], landmarks, width, height)
+    pts2 = get_points([rule.reference1, rule.reference2], landmarks, width, height)
+
+    if len(pts1) < 2 or len(pts2) < 2:
+        return ValidationResult(rule.name, rule.message, rule.severity, True, None, joints=())
+
+    distance = calc_distance(pts1[0], pts1[1])
+    reference_distance = calc_distance(pts2[0], pts2[1])
+
+    if reference_distance == 0:
+        return ValidationResult(rule.name, rule.message, rule.severity, True, None, joints=())
+
+    ratio = distance / reference_distance
+    passed = rule.min_ratio <= ratio <= rule.max_ratio
+
+    return ValidationResult(
+        rule.name, rule.message, rule.severity, passed, ratio, joints=(rule.point1, rule.point2)
+    )
+
+
 def validate_all(
-    rules: Iterable[AngleValidationRule], landmarks, width: int, height: int
+    rules: Iterable,
+    landmarks,
+    width: int,
+    height: int,
+    states: dict | None = None,
 ) -> list[ValidationResult]:
-    """Run every validation rule; order matches the input list."""
-    return [evaluate_rule(rule, landmarks, width, height) for rule in rules]
+    """Run every validation rule; dispatches on rule type.
+
+    ``states`` is only needed for AngleROMValidationRule; it may be omitted for
+    exercises that only use plain AngleValidationRules.
+    """
+    results = []
+    for rule in rules:
+        if isinstance(rule, AngleROMValidationRule):
+            state = (states or {}).get(rule.name)
+            results.append(evaluate_rom_rule(rule, landmarks, width, height, state))
+        elif isinstance(rule, DistanceValidationRule):
+            results.append(evaluate_distance_rule(rule, landmarks, width, height))
+        else:
+            results.append(evaluate_rule(rule, landmarks, width, height))
+    return results
 
 
 def violations(results: Sequence[ValidationResult]) -> list[ValidationResult]:
@@ -1512,6 +1727,166 @@ __all__ = ["GymEngine", "PoseService", "RepCounter", "RepState", "RepJudge", "Re
 
 ---
 
+### FILE: [src/services/additional_casses.py](src/services/additional_casses.py)
+
+```py
+"""Additional cases and ROM logic helpers for RepCounter.
+
+This module encapsulates all exercise-specific complexity (ROM, speed checks,
+prefix-matched violations) to keep the core `rep_counter.py` clean and simple.
+"""
+
+from typing import Dict, Optional, Set
+from ..exercises.rules import AngleCounterRule
+
+# Stage constants
+STAGE_UP        = "up"
+STAGE_DOWN      = "down"
+STAGE_RETURNING = "returning"
+
+
+class CustomCounterHelper:
+    """Helper class to handle stateful ROM, speed, and violation logic."""
+
+    def __init__(self, counter_instance) -> None:
+        self.counter = counter_instance
+        # Per-rule violation flag: was there a violation during the current rep?
+        self._pending_violations: Dict[str, bool] = {
+            r.name: False for r in counter_instance.rules
+        }
+        # Per-rule frame counter: how many frames since DOWN phase began?
+        self._rep_frame_counts: Dict[str, int] = {
+            r.name: 0 for r in counter_instance.rules
+        }
+        # Remember the previous angle for each rule to detect direction changes
+        self._prev_angles: Dict[str, float] = {
+            r.name: 0.0 for r in counter_instance.rules
+        }
+        # Custom started flags to isolate rep window
+        self._started: Dict[str, bool] = {
+            r.name: False for r in counter_instance.rules
+        }
+
+    def _count_rep(self, rule: AngleCounterRule, state, *, good: bool, too_fast: bool = False) -> None:
+        """Finalise one repetition and increment the corresponding counters."""
+        state.count += 1
+        if good:
+            state.good += 1
+        else:
+            state.bad += 1
+        self._started[rule.name] = False
+        state.speed_warning = too_fast
+
+    def _start_down(self, rule: AngleCounterRule, state, angle: float) -> None:
+        """Enter DOWN phase: reset rep counters and start frame tracking."""
+        state.stage = STAGE_DOWN
+        self._started[rule.name] = True
+        state.reached_bottom = False
+        state.speed_warning = False
+        self._pending_violations[rule.name] = False
+        self._rep_frame_counts[rule.name] = 0
+        rom_min = getattr(rule, "rom_min_angle", None)
+        if rom_min is not None and angle <= rom_min:
+            state.reached_bottom = True
+
+    def update(
+        self,
+        angles: Dict[str, Optional[float]],
+        violation_names: Optional[Set[str]] = None,
+    ) -> Dict[str, any]:
+        """Execute stateful ROM, speed check, and violation tracking."""
+        vnames = violation_names or set()
+
+        for rule in self.counter.rules:
+            angle = angles.get(rule.name)
+            if angle is None:
+                continue
+
+            state = self.counter.states[rule.name]
+            prev_angle = self._prev_angles[rule.name]
+            self._prev_angles[rule.name] = angle
+            state.angle = angle
+
+            has_rom = getattr(rule, "rom_max_angle", None) is not None
+
+            # ── Violation accumulation during active rep window ───────────
+            if self._started[rule.name]:
+                active_viols = {
+                    v for v in vnames
+                    if v.startswith(rule.name) and not (has_rom and v == rule.name)
+                }
+                # Fallback general posture checks for primary counter rule
+                if rule == self.counter.rules[0]:
+                    other_viols = {
+                        v for v in vnames
+                        if not any(r.name != rule.name and v.startswith(r.name) for r in self.counter.rules)
+                        and not (has_rom and v == rule.name)
+                    }
+                    active_viols.update(other_viols)
+
+                if active_viols:
+                    self._pending_violations[rule.name] = True
+
+            # ── Rep frame counter for speed checks ────────────────────────
+            if self._started[rule.name]:
+                self._rep_frame_counts[rule.name] += 1
+
+            # ── Standard exercises path (but with speed/violation checks) ─
+            if not has_rom:
+                if angle <= rule.down_angle:
+                    if state.stage != STAGE_DOWN:
+                        self._start_down(rule, state, angle)
+                elif angle >= rule.up_angle:
+                    if self._started[rule.name] and state.stage == STAGE_DOWN:
+                        too_fast = (
+                            rule.min_rep_frames > 0
+                            and self._rep_frame_counts[rule.name] < rule.min_rep_frames
+                        )
+                        good = not self._pending_violations[rule.name] and not too_fast
+                        self._count_rep(rule, state, good=good, too_fast=too_fast)
+                    state.stage = STAGE_UP
+
+            # ── Range of Motion (ROM) exercises path ──────────────────────
+            else:
+                rom_min = getattr(rule, "rom_min_angle", None)
+                rom_max = rule.rom_max_angle
+
+                # Track bottom depth
+                if rom_min is not None and angle <= rom_min:
+                    state.reached_bottom = True
+
+                # DOWN phase begins (or RETURNING reversal)
+                if angle <= rule.down_angle:
+                    if state.stage == STAGE_RETURNING:
+                        if self._started[rule.name]:
+                            self._count_rep(rule, state, good=False)
+                    if state.stage != STAGE_DOWN:
+                        self._start_down(rule, state, angle)
+
+                # Enter RETURNING stage when crossing up_angle
+                elif angle >= rule.up_angle and state.stage == STAGE_DOWN and self._started[rule.name]:
+                    state.stage = STAGE_RETURNING
+
+                # Top extreme reached and user starts curling back up (reversal)
+                elif state.stage == STAGE_RETURNING and angle >= rom_max:
+                    if angle < prev_angle:
+                        too_fast = (
+                            rule.min_rep_frames > 0
+                            and self._rep_frame_counts[rule.name] < rule.min_rep_frames
+                        )
+                        good = (
+                            state.reached_bottom
+                            and not self._pending_violations[rule.name]
+                            and not too_fast
+                        )
+                        self._count_rep(rule, state, good=good, too_fast=too_fast)
+                        state.stage = STAGE_UP
+
+        return self.counter.states
+```
+
+---
+
 ### FILE: [src/services/gym_engine.py](src/services/gym_engine.py)
 
 ```py
@@ -1529,7 +1904,8 @@ from ..core import Colors
 from ..exercises.exercise import Exercise
 from ..exercises.validation import ValidationResult, validate_all, violations
 from ..utils.geometry import ComputedAngle, calc_angle, get_points
-from ..utils.render import draw_angle_arc, draw_angle_labels, draw_skeleton, draw_stats, fit_to_screen
+from ..utils.render import draw_angle_arc, draw_angle_labels, draw_skeleton, draw_stats, fit_to_screen, draw_wrist_line
+from ..utils.camera_side import CameraSideDetector
 from .pose_service import PoseService
 from .rep_counter import RepCounter
 from .rep_judge import RepJudge
@@ -1567,12 +1943,27 @@ class GymEngine:
         # Optional maximum display width (e.g. DISPLAY_MAX_WIDTH). The frame is
         # first auto-fit to the detected screen; this only caps it further.
         self.display_width = display_width
+        self.side_detector = CameraSideDetector(30) if exercise.camera == "side" else None
+        self.rules_adapted = False if exercise.camera == "side" else True
+        # Track distance violations during current rep for shoulder press
+        self._distance_violation_in_current_rep = False
 
     # ------------------------------------------------------------------
     # Analysis: pure logic, no I/O -> easy to unit test with fake landmarks.
     # ------------------------------------------------------------------
     def analyze(self, landmarks, width: int, height: int, frame: int) -> FrameResult:
         """Compute angles, update the counter, run validation, and judge reps."""
+        if self.side_detector and not self.rules_adapted:
+            side = self.side_detector.process_frame(landmarks)
+            if side:
+                from ..utils.camera_side import adapt_rules
+                self.exercise.counter_rules = adapt_rules(self.exercise.counter_rules, side)
+                self.exercise.validation_rules = adapt_rules(self.exercise.validation_rules, side)
+                self.counter = RepCounter(self.exercise.counter_rules)
+                self.rules_adapted = True
+            if not self.rules_adapted:
+                return FrameResult(angles={}, states=self.counter.states, results=[], views=[])
+
         angles = {}
         views = []  # unified per-rule angle views for the renderer
 
@@ -1584,7 +1975,7 @@ class GymEngine:
             # Counter angles are never "failed" -> drawn with the highlight colour.
             views.append(ComputedAngle(name=rule.name, vertex=vertex, angle=angle, is_error=False))
 
-        results = validate_all(self.exercise.validation_rules, landmarks, width, height)
+        results = validate_all(self.exercise.validation_rules, landmarks, width, height, states=self.counter.states)
 
         for res in results:
             pts = get_points(res.joints, landmarks, width, height)
@@ -1593,18 +1984,54 @@ class GymEngine:
                 ComputedAngle(name=res.rule_name, vertex=vertex, angle=res.angle, is_error=not res.passed)
             )
 
-        # ── Rep quality tracking (orchestration only) ──────────────────
-        # GymEngine feeds validation results to the judge every frame and tells
-        # the judge when a rep completed. Completion is detected here by reading
-        # RepCounter's rep count -- RepCounter remains the sole authority on
-        # counting and is never told about validation. All GOOD/BAD logic lives
-        # in RepJudge, so nothing in this class decides rep quality.
-        self.judge.observe(results, frame)
-
+        # ── Rep quality tracking ───────────────────────────────────────
+        # RepCounter owns counting AND quality (good/bad) decisions.
+        # Pass violation_names (set of failing rule names) — not a single global
+        # bool — so each counter rule only accumulates violations for its own joints.
+        violation_names = {r.rule_name for r in violations(results)}
+        prev_good  = self.counter.primary.good
         prev_count = self.counter.primary.count
-        self.counter.update(angles)  # RepCounter detects completion
+
+        # Track distance violations for shoulder press
+        if self.exercise.name == "Shoulder Press":
+            if "left_shoulder_wrist_distance" in violation_names:
+                self._distance_violation_in_current_rep = True
+            # Reset flag when rep completes (checked below)
+            if self.counter.primary.stage == "up" and prev_count == self.counter.primary.count:
+                # We're in up stage but no new rep counted, so reset the flag
+                self._distance_violation_in_current_rep = False
+
+        self.counter.update(angles, violation_names)
+
         if self.counter.primary.count > prev_count:
-            self.judge.finalize_rep(self.counter.primary.count, frame)
+            # Rep just completed - check if there was a distance violation
+            if self.exercise.name == "Shoulder Press" and self._distance_violation_in_current_rep:
+                # Force this rep to be bad
+                self.judge.finalize_rep(
+                    self.counter.primary.count,
+                    frame,
+                    force_good=False,
+                )
+                self._distance_violation_in_current_rep = False
+            else:
+                rep_was_good = self.counter.primary.good > prev_good
+                if self.counter.primary.speed_warning:
+                    # Inject a speed violation warning
+                    from ..exercises.validation import ValidationResult
+                    self.judge.observe([
+                        ValidationResult(
+                            rule_name=self.exercise.counter_rules[0].name + "_too_fast",
+                            message="Too fast — control the movement",
+                            severity="warning",
+                            passed=False,
+                            angle=None
+                        )
+                    ], frame)
+                self.judge.finalize_rep(
+                    self.counter.primary.count,
+                    frame,
+                    force_good=rep_was_good,
+                )
 
         return FrameResult(
             angles=angles, states=self.counter.states, results=results, views=views
@@ -1619,10 +2046,40 @@ class GymEngine:
 
         # Skeleton for every joint set the exercise cares about.
         if show.show_skeleton:
-            for rule in self.exercise.counter_rules + self.exercise.validation_rules:
+            drawn_joints = set()
+            for rule in self.exercise.counter_rules:
                 pts = get_points(rule.joints, landmarks, width, height)
                 if len(pts) >= 3:
-                    draw_skeleton(frame, pts, self.colors, is_bad=bad)
+                    custom_color = None
+                    if bad:
+                        custom_color = self.colors.ERROR
+                    elif hasattr(rule, 'rom_min_angle') and rule.rom_min_angle is not None:
+                        state = self.counter.states.get(rule.name)
+                        if state is not None:
+                            # Only show RED/GREEN feedback when actively in a rep
+                            # (DOWN or RETURNING stage). At UP/rest, use default color.
+                            if state.stage in (rule.up_stage,):
+                                custom_color = None  # resting — default white
+                            elif state.reached_bottom:
+                                custom_color = self.colors.HIGHLIGHT   # GREEN — depth reached
+                            else:
+                                custom_color = self.colors.ERROR        # RED — need to go deeper
+                    draw_skeleton(frame, pts, self.colors, is_bad=bad, custom_color=custom_color)
+                    drawn_joints.add(tuple(sorted(rule.joints)))
+
+            # Validation-rule skeletons (e.g. back angle for deadlift).
+            # Can be suppressed per-exercise via DisplaySettings.show_validation_skeleton.
+            # For shoulder press, only show arm joints (no validation skeletons)
+            if show.show_validation_skeleton and self.exercise.name != "Shoulder Press":
+                for rule in self.exercise.validation_rules:
+                    # Only draw skeletons for rules with joints attribute (AngleValidationRule)
+                    if hasattr(rule, 'joints'):
+                        joints_key = tuple(sorted(rule.joints))
+                        if joints_key not in drawn_joints:
+                            pts = get_points(rule.joints, landmarks, width, height)
+                            if len(pts) >= 3:
+                                draw_skeleton(frame, pts, self.colors, is_bad=bad)
+                                drawn_joints.add(joints_key)
 
         # Live angle arcs for each counter rule (visual only; the numeric
         # value is drawn by draw_angle_labels for EVERY computed angle).
@@ -1636,6 +2093,25 @@ class GymEngine:
         # positioned at the rule's vertex joint. Fully automatic & rule-agnostic.
         draw_angle_labels(frame, result.views, self.colors, width, height)
 
+        # Custom rendering for shoulder press: draw wrist line when both arms are up
+        if self.exercise.name == "Shoulder Press":
+            left_shoulder_angle = result.angles.get("left_shoulder")
+            right_shoulder_angle = result.angles.get("right_shoulder")
+            # Only show line when both shoulder angles > 90 (arms actually up)
+            if left_shoulder_angle and right_shoulder_angle:
+                if left_shoulder_angle > 90 and right_shoulder_angle > 90:
+                    # Check if distance validation failed
+                    distance_failed = any(
+                        r.rule_name == "left_shoulder_wrist_distance" and not r.passed
+                        for r in result.results
+                    )
+                    line_color = self.colors.ERROR if distance_failed else self.colors.HIGHLIGHT
+                    from ..core.pose_segments import L_WRIST, R_WRIST
+                    left_wrist_pt = get_points([L_WRIST], landmarks, width, height)
+                    right_wrist_pt = get_points([R_WRIST], landmarks, width, height)
+                    if left_wrist_pt and right_wrist_pt:
+                        draw_wrist_line(frame, left_wrist_pt[0], right_wrist_pt[0], self.colors, line_color)
+
         # Stats / coaching panel: a fixed bottom-left overlay (not anchored to
         # any body landmark). Layout lives in utils/render.py. Rep-quality
         # figures come from RepJudge (history is the single source of truth).
@@ -1648,6 +2124,14 @@ class GymEngine:
             else "BAD" if last is not None
             else "—"
         )
+        display_stage = primary.stage
+        if self.exercise.counter_rules:
+            rule = self.exercise.counter_rules[0]
+            if primary.stage == "up":
+                display_stage = rule.up_stage
+            elif primary.stage == "down":
+                display_stage = rule.down_stage
+
         draw_stats(
             frame,
             exercise_name=self.exercise.name,
@@ -1655,7 +2139,7 @@ class GymEngine:
             good_reps=self.judge.good_reps,
             bad_reps=self.judge.bad_reps,
             current_rep=current_rep,
-            stage=primary.stage,
+            stage=display_stage,
             angle=primary.angle,
             feedback=feedback,
             colors=self.colors,
@@ -1685,6 +2169,8 @@ class GymEngine:
     def run(self, video_path: str | None = None):
         if settings.USE_WEBCAM:
             cap = cv2.VideoCapture(settings.WEBCAM_INDEX)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         else:
             src = video_path or settings.VIDEO_PATH
             cap = cv2.VideoCapture(str(src) if src is not None else None)
@@ -1766,6 +2252,7 @@ class GymEngine:
             )
             self._export_session(summary)
 
+        print(self.judge.history)
         cap.release()
         if writer:
             writer.release()
@@ -1810,8 +2297,7 @@ class PoseService:
 """Repetition counter driven entirely by AngleCounterRule configuration."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
-
+from typing import Dict, List, Optional, Set
 from ..exercises.rules import AngleCounterRule
 
 
@@ -1822,6 +2308,12 @@ class RepState:
     angle: float = 0.0
     count: int = 0
     stage: str = "up"
+
+    # Fields for compatibility with custom ROM/speed/violation cases
+    good: int = 0
+    bad: int = 0
+    speed_warning: bool = False
+    reached_bottom: bool = False
 
 
 class RepCounter:
@@ -1837,13 +2329,31 @@ class RepCounter:
         self.rules = rules
         self.states: Dict[str, RepState] = {r.name: RepState() for r in rules}
 
+        # Check if any rule requires stateful ROM checks or speed checks
+        has_custom = any(
+            r.rom_max_angle is not None or r.min_rep_frames > 0 for r in rules
+        )
+        if has_custom:
+            from .additional_casses import CustomCounterHelper
+            self._helper = CustomCounterHelper(self)
+        else:
+            self._helper = None
+
     @property
     def primary(self) -> RepState:
         """State backing the displayed rep count (first counter rule)."""
         return next(iter(self.states.values()))
 
-    def update(self, angles: Dict[str, Optional[float]]) -> Dict[str, RepState]:
+    def update(
+        self,
+        angles: Dict[str, Optional[float]],
+        violation_names: Optional[Set[str]] = None,
+    ) -> Dict[str, RepState]:
         """Feed in the current angle for each rule; advance counts/stages."""
+        if self._helper:
+            return self._helper.update(angles, violation_names)
+
+        # Original, simple generic counter code
         for rule in self.rules:
             angle = angles.get(rule.name)
             if angle is None:
@@ -1857,6 +2367,7 @@ class RepCounter:
                 # Entering the "down" position from "up" completes a rep.
                 if state.stage == rule.up_stage:
                     state.count += 1
+                    state.good += 1  # default simple reps are always good
                 state.stage = rule.down_stage
             elif angle > rule.up_angle:
                 state.stage = rule.up_stage
@@ -1969,19 +2480,24 @@ class RepJudge:
                 self._violations[r.rule_name] = r
 
     # -- completion ------------------------------------------------------
-    def finalize_rep(self, rep_number: int, frame: int = 0) -> RepResult:
+    def finalize_rep(self, rep_number: int, frame: int = 0, force_good: bool | None = None) -> RepResult:
         """Finalize the current repetition and begin tracking the next one.
 
         Builds a :class:`RepResult`, appends it to :attr:`history`, resets the
         temporary per-rep state, and returns the result.
 
-        A repetition is BAD iff at least one stored violation has
-        ``severity == "error"``; warnings alone leave it GOOD.
+        If ``force_good`` is provided (not None), it overrides the internal
+        violation tracking. This is used when RepCounter has already decided
+        quality (tracking violations only from DOWN phase start onward).
         """
-        bad = any(v.severity == "error" for v in self._violations.values())
+        if force_good is not None:
+            good = force_good
+        else:
+            bad = any(v.severity in ("error", "warning") for v in self._violations.values())
+            good = not bad
         result = RepResult(
             number=rep_number,
-            good=not bad,
+            good=good,
             violations=list(self._violations.values()),
             start_frame=self._start_frame,
             end_frame=frame,
@@ -2127,6 +2643,94 @@ from .render import draw_angle_arc
 
 ---
 
+### FILE: [src/utils/camera_side.py](src/utils/camera_side.py)
+
+```py
+import dataclasses
+
+class CameraSideDetector:
+    def __init__(self, target_frames: int = 30):
+        self.target_frames = target_frames
+        self.frame_count = 0
+        self.left_vis_sum = 0.0
+        self.right_vis_sum = 0.0
+        self.detected_side = None
+
+    def process_frame(self, landmarks) -> str | None:
+        if self.detected_side is not None:
+            return self.detected_side
+
+        left_joints = [11, 13, 15, 23, 25, 27]
+        right_joints = [12, 14, 16, 24, 26, 28]
+
+        l_vis = sum(landmarks[i].visibility for i in left_joints) / len(left_joints)
+        r_vis = sum(landmarks[i].visibility for i in right_joints) / len(right_joints)
+
+        self.left_vis_sum += l_vis
+        self.right_vis_sum += r_vis
+        self.frame_count += 1
+
+        if self.frame_count >= self.target_frames:
+            if self.left_vis_sum > self.right_vis_sum:
+                self.detected_side = "left"
+            else:
+                self.detected_side = "right"
+            return self.detected_side
+
+        return None
+
+
+def normalize_name(name: str) -> str:
+    for suffix in ["_left", "_right", "_l", "_r"]:
+        if name.endswith(suffix):
+            return name[:-len(suffix)]
+    return name
+
+
+def get_joints_side(joints) -> str:
+    left_count = sum(1 for j in joints if j >= 7 and j <= 32 and j % 2 != 0)
+    right_count = sum(1 for j in joints if j >= 7 and j <= 32 and j % 2 == 0)
+    if left_count > right_count:
+        return "left"
+    elif right_count > left_count:
+        return "right"
+    return "both"
+
+
+def adapt_rules(rules, target_side: str):
+    adapted = []
+    target_side_normalized_names = set()
+    for rule in rules:
+        side = get_joints_side(rule.joints)
+        if side == target_side:
+            target_side_normalized_names.add(normalize_name(rule.name))
+
+    for rule in rules:
+        side = get_joints_side(rule.joints)
+        if side == target_side or side == "both":
+            adapted.append(rule)
+        elif side != "both":
+            norm_name = normalize_name(rule.name)
+            if norm_name not in target_side_normalized_names:
+                new_joints = []
+                for j in rule.joints:
+                    if j >= 7 and j <= 32:
+                        is_odd = (j % 2 != 0)
+                        if target_side == "left" and not is_odd:
+                            new_joints.append(j - 1)
+                        elif target_side == "right" and is_odd:
+                            new_joints.append(j + 1)
+                        else:
+                            new_joints.append(j)
+                    else:
+                        new_joints.append(j)
+                new_rule = dataclasses.replace(rule, joints=tuple(new_joints))
+                adapted.append(new_rule)
+    return adapted
+```
+
+---
+
 ### FILE: [src/utils/geometry.py](src/utils/geometry.py)
 
 ```py
@@ -2167,8 +2771,19 @@ def calc_angle(a, b, c):
     return math.degrees(math.acos(cos_theta))
 
 
-def get_points(indices, landmarks, w, h):
-    return [(int(landmarks[i].x * w), int(landmarks[i].y * h)) for i in indices]
+def get_points(indices, landmarks, w, h, threshold: float = 0.5):
+    pts = []
+    for i in indices:
+        lm = landmarks[i]
+        if hasattr(lm, "visibility") and lm.visibility < threshold:
+            continue
+        pts.append((int(lm.x * w), int(lm.y * h)))
+    return pts
+
+
+def calc_distance(p1, p2):
+    """Calculate Euclidean distance between two points."""
+    return math.hypot(p2[0] - p1[0], p2[1] - p1[1])
 ```
 
 ---
@@ -2196,18 +2811,47 @@ STATS_THICKNESS = 2
 STATS_BG_ALPHA = 0.5       # opacity of the semi-transparent background
 
 
-def draw_skeleton(frame, pts, colors, is_bad=False):
+def draw_skeleton(frame, pts, colors, is_bad=False, custom_color=None):
     if len(pts) < 3:
         return
 
-    line_color = colors.ERROR if is_bad else colors.LINE
-    point_color = colors.ERROR if is_bad else colors.HIGHLIGHT
+    # Dodger-blue BGR = (235, 145, 30) -> RGB(30,145,235) bright blue
+    SKEL_COLOR = (255, 255, 255)
+    if custom_color is not None:
+        line_color = custom_color
+        point_color = custom_color
+    else:
+        line_color = colors.ERROR if is_bad else SKEL_COLOR
+        point_color = colors.ERROR if is_bad else SKEL_COLOR
 
-    cv2.line(frame, pts[0], pts[1], line_color, 3)
-    cv2.line(frame, pts[1], pts[2], line_color, 3)
+    LINE_W = 5    # thin line — exactly like the reference image
+    RADIUS = 12   # circle radius slightly bigger than line width
+    BORDER_W = 8    # circle border — same weight as the lines
 
+    def _edge_point(src, dst, r):
+        """Point on the edge of the circle at *src* facing *dst*.
+        Lines are drawn FROM here so they never cross into the circle."""
+        dx, dy = dst[0] - src[0], dst[1] - src[1]
+        dist = math.hypot(dx, dy)
+        if dist < 1:
+            return src
+        return (int(src[0] + dx / dist * r),
+                int(src[1] + dy / dist * r))
+
+    p0, p1, p2 = pts[0], pts[1], pts[2]
+
+    # ① Lines drawn FIRST — sit behind the circles
+    cv2.line(frame,
+             _edge_point(p0, p1, RADIUS), _edge_point(p1, p0, RADIUS),
+             line_color, LINE_W, cv2.LINE_AA)
+    cv2.line(frame,
+             _edge_point(p1, p2, RADIUS), _edge_point(p2, p1, RADIUS),
+             line_color, LINE_W, cv2.LINE_AA)
+
+    # ② Hollow circles drawn LAST — always on top, clean edges, never filled
     for p in pts:
-        cv2.circle(frame, p, 6, point_color, -1)
+        cv2.circle(frame, p, RADIUS, point_color, BORDER_W, cv2.LINE_AA)
+
 
 
 def draw_stats(
@@ -2359,9 +3003,12 @@ def fit_to_screen(frame, max_width=None,
 def draw_angle_arc(frame, a, b, c, colors, is_bad=False, radius=20):
     """Draw the visual angle arc at point B between BA and BC.
 
-    Only the arc is drawn here; the numeric angle value is rendered by
-    ``draw_angle_labels`` for every computed angle (counter + validation).
+    The arc radius is set LARGER than the skeleton circle (RADIUS=22) so the
+    arc appears clearly OUTSIDE the joint circle — never overlapping it.
+    Only the arc is drawn here; the numeric label is rendered by draw_angle_labels.
     """
+    # Arc must be bigger than the skeleton circle radius (22px) to sit outside it
+    ARC_RADIUS = 42   # clearly outside the 22px skeleton circle
 
     ba = (a[0] - b[0], a[1] - b[1])
     bc = (c[0] - b[0], c[1] - b[1])
@@ -2370,18 +3017,18 @@ def draw_angle_arc(frame, a, b, c, colors, is_bad=False, radius=20):
     angle2 = math.degrees(math.atan2(bc[1], bc[0]))
 
     start_angle = int(angle1)
-    end_angle = int(angle2)
+    end_angle   = int(angle2)
 
-    # fix direction (always draw smallest arc)
+    # Always draw the smallest arc (the actual angle, not the reflex)
     if end_angle < start_angle:
         end_angle += 360
-
     if end_angle - start_angle > 180:
         start_angle, end_angle = end_angle, start_angle + 360
 
     color = colors.ERROR if is_bad else colors.HIGHLIGHT
 
-    cv2.ellipse(frame, b, (radius, radius), 0, start_angle, end_angle, color, 5)
+    cv2.ellipse(frame, b, (ARC_RADIUS, ARC_RADIUS),
+                0, start_angle, end_angle, color, 2, cv2.LINE_AA)
 
 
 # ── Floating angle-label layout ──────────────────────────────────────────────
@@ -2425,8 +3072,11 @@ def draw_angle_labels(frame, views: list[ComputedAngle], colors, width: int, hei
     border = max(1, round(2 * scale))
 
     for v in views:
+        # Don't show N/A label when angle couldn't be computed
+        if v.angle is None:
+            continue
         color = colors.ERROR if v.is_error else colors.HIGHLIGHT
-        text = "N/A" if v.angle is None else f"{int(round(v.angle))} deg"
+        text = f"{int(round(v.angle))} deg"
 
         (tw, th), _ = cv2.getTextSize(text, ANGLE_FONT, font_scale, thickness)
         box_w = tw + padding * 2
@@ -2450,6 +3100,12 @@ def draw_angle_labels(frame, views: list[ComputedAngle], colors, width: int, hei
             frame, text, (bx + padding, by + padding + th),
             ANGLE_FONT, font_scale, color, thickness, cv2.LINE_AA,
         )
+
+
+def draw_wrist_line(frame, left_wrist, right_wrist, colors, custom_color=None):
+    """Draw a line between left and right wrists (for shoulder press peak position)."""
+    line_color = custom_color if custom_color is not None else colors.HIGHLIGHT
+    cv2.line(frame, left_wrist, right_wrist, line_color, 3, cv2.LINE_AA)
 ```
 
 ---
@@ -2485,7 +3141,7 @@ import sys
 
 from .config import settings
 from .core.colors import Colors
-from .exercises import registry
+from .exercises.registry import registry
 from .services.gym_engine import GymEngine
 
 DEFAULT_EXERCISE = "cable_chest_fly"
@@ -2495,7 +3151,19 @@ def main():
     args = sys.argv[1:]
 
     exercise_key = args[0].lower() if len(args) >= 1 else None
-    video_path   = args[1]         if len(args) >= 2 else None
+
+    # Parse CLI flags: 'c' for webcam, 's' for saving output
+    lower_args = [arg.lower() for arg in args[1:]]
+    save_flag = "s" in lower_args
+    settings.SAVE_OUTPUT = save_flag
+
+    use_webcam_flag = "c" in lower_args
+    if use_webcam_flag:
+        settings.USE_WEBCAM = True
+        video_path = None
+    else:
+        remaining_args = [arg for arg in args[1:] if arg.lower() not in ("s", "c")]
+        video_path = remaining_args[0] if remaining_args else None
 
     # The CLI simply asks the registry for an exercise — it knows nothing about
     # which exercises exist. GymEngine stays completely unaware of the registry.
@@ -2507,6 +3175,13 @@ def main():
     exercise = (
         registry.get(exercise_key) if exercise_key else registry.get(DEFAULT_EXERCISE)
     )
+
+    if video_path:
+        import os
+        if not os.path.exists(video_path):
+            alt_path = os.path.join("videos", video_path)
+            if os.path.exists(alt_path):
+                video_path = alt_path
 
     GymEngine(
         exercise,
@@ -2523,5 +3198,5 @@ if __name__ == "__main__":
 
 ## EXPORT SUMMARY
 
-- Files exported: 34
-- Lines exported: 2198
+- Files exported: 36
+- Lines exported: 2853

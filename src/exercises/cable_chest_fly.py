@@ -15,15 +15,19 @@ class CableChestFlyExercise(Exercise):
         default_factory=lambda: [
             AngleCounterRule(
                 name="left",
-                joints=PoseSegments.LEFT_ELBOW_ELEVATION,   # L_HIP -> L_SHOULDER -> L_ELBOW
-                up_angle=110, down_angle=58,
-                up_stage="open", down_stage="close",
+                joints=PoseSegments.LEFT_ELBOW_ELEVATION,  # L_HIP -> L_SHOULDER -> L_ELBOW
+                up_angle=110,
+                down_angle=58,
+                up_stage="open",
+                down_stage="close",
             ),
             AngleCounterRule(
                 name="right",
                 joints=PoseSegments.RIGHT_ELBOW_ELEVATION,  # R_HIP -> R_SHOULDER -> R_ELBOW
-                up_angle=110, down_angle=58,
-                up_stage="open", down_stage="close",
+                up_angle=110,
+                down_angle=58,
+                up_stage="open",
+                down_stage="close",
             ),
         ]
     )
@@ -33,7 +37,8 @@ class CableChestFlyExercise(Exercise):
             AngleValidationRule(
                 name="chest_up",
                 joints=PoseSegments.LEFT_TORSO,
-                min_angle=120, max_angle=180,
+                min_angle=120,
+                max_angle=180,
                 message="Keep chest up — don't roll shoulders forward",
                 severity="warning",
             ),
