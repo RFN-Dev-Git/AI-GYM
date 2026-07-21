@@ -1,0 +1,120 @@
+"""Rule dataclasses: the atomic, exercise-agnostic building blocks.
+
+A rule is pure configuration. It knows nothing about *which* exercise uses it
+and contains no logic. GymEngine reads these fields and acts on them.
+"""
+
+from dataclasses import dataclass
+from typing import Literal
+
+# How severe a failed validation is. Used by the renderer for colouring /
+# weighting feedback. Extend freely (e.g. "info") without touching the engine.
+Severity = Literal["error", "warning", "info"]
+
+
+@dataclass(frozen=True)
+class AngleCounterRule:
+    """Describes how ONE repetition is counted from a single joint angle.
+
+    Why a dataclass (not a function/class hierarchy): a rep count is fully
+    described by four numbers and two labels. There is no behaviour to model,
+    so a frozen dataclass is the simplest honest representation.
+
+    Attributes:
+        name:        Stable id, also used as the on-screen label.
+        joints:      Three pose-landmark indices forming the measured angle.
+        up_angle:    Angle (deg) that marks the "up" / top of a rep.
+        down_angle:  Angle (deg) that marks the "down" / bottom of a rep.
+        up_stage:    Label applied while at/above ``up_angle`` (default "up").
+        down_stage:  Label applied while at/below ``down_angle`` (default "down").
+        sync_group:  Optional group name for synchronized multi-rule counting.
+                     Rules with the same sync_group must reach thresholds together.
+
+    ``up_stage`` / ``down_stage`` exist so the stage vocabulary is configurable
+    ("up"/"down" today, but a future exercise could use different labels or a
+    reversed count direction) without changing GymEngine or RepCounter.
+    """
+
+    name: str
+    joints: tuple[int, int, int]
+    up_angle: float
+    down_angle: float
+    up_stage: str = "up"
+    down_stage: str = "down"
+    rom_min_angle: float | None = None
+    rom_max_angle: float | None = None
+    min_rep_frames: int = 0   # minimum frames a rep must span (0 = no check)
+    sync_group: str | None = None  # optional synchronization group
+
+
+@dataclass(frozen=True)
+class AngleValidationRule:
+    """Describes ONE independent form-check based on a joint angle.
+
+    Each rule is completely self-contained: it knows which angle to measure and
+    the acceptable ``[min_angle, max_angle]`` window. If the measured angle
+    falls outside that window, ``message`` is surfaced to the user.
+
+    Attributes:
+        name:       Stable id.
+        joints:     Three pose-landmark indices forming the measured angle.
+        min_angle:  Lower bound of the acceptable range (deg).
+        max_angle:  Upper bound of the acceptable range (deg).
+        message:    Human-readable coaching cue shown when the rule fails.
+        severity:   "error" | "warning" | "info" — drives feedback emphasis.
+    """
+
+    name: str
+    joints: tuple[int, int, int]
+    min_angle: float
+    max_angle: float
+    message: str
+    severity: Severity = "error"
+
+
+@dataclass(frozen=True)
+class AngleROMValidationRule:
+    """Describes a stateful Range of Motion (ROM) validation rule.
+
+    Attributes:
+        name:          Stable id matching the corresponding CounterRule name.
+        joints:        Three pose-landmark indices forming the measured angle.
+        min_rom_angle: Bottom angle threshold (deg) that must be reached.
+        max_rom_angle: Top angle threshold (deg) that must be reached.
+        message:       Human-readable coaching cue shown when the rule fails.
+        severity:      "error" | "warning" | "info" — drives feedback emphasis.
+    """
+
+    name: str
+    joints: tuple[int, int, int]
+    min_rom_angle: float
+    max_rom_angle: float
+    message: str
+    severity: Severity = "error"
+
+
+@dataclass(frozen=True)
+class DistanceValidationRule:
+    """Describes a validation rule based on distance between two landmarks.
+
+    Attributes:
+        name:         Stable id.
+        point1:       First landmark index.
+        point2:       Second landmark index.
+        min_ratio:    Minimum acceptable ratio (point1-point2 distance / reference distance).
+        max_ratio:    Maximum acceptable ratio (point1-point2 distance / reference distance).
+        reference1:   First reference landmark index for ratio calculation.
+        reference2:   Second reference landmark index for ratio calculation.
+        message:      Human-readable coaching cue shown when the rule fails.
+        severity:     "error" | "warning" | "info" — drives feedback emphasis.
+    """
+
+    name: str
+    point1: int
+    point2: int
+    min_ratio: float
+    max_ratio: float
+    reference1: int
+    reference2: int
+    message: str
+    severity: Severity = "error"
