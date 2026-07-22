@@ -35,7 +35,7 @@ def calc_angle(a, b, c):
     return math.degrees(math.acos(cos_theta))
 
 
-def get_points(indices, landmarks, w, h, threshold: float = 0.5):
+def get_points(indices, landmarks, w, h, threshold: float = 0.3):
     pts = []
     for i in indices:
         lm = landmarks[i]

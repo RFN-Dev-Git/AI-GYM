@@ -9,8 +9,8 @@ modification when new rule *kinds* are added later (see EXTENSION POINT below).
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
-from ..utils.geometry import calc_angle, get_points, calc_distance
-from .rules import AngleValidationRule, AngleROMValidationRule, DistanceValidationRule
+from ..utils.geometry import calc_angle, get_points
+from .rules import AngleValidationRule, AngleROMValidationRule
 
 _STAGE_DOWN      = "down"
 _STAGE_RETURNING = "returning"
@@ -34,11 +34,12 @@ def evaluate_rule(
     """Evaluate one angle-based AngleValidationRule against the detected pose."""
     pts = get_points(rule.joints, landmarks, width, height)
     angle = calc_angle(*pts) if len(pts) >= 3 else None
-    # Preserve the prior behaviour for the pass/fail decision: when the angle
-    # is undefined we fall back to 0° *only* for the range check. The reported
-    # `angle` stays None so the UI can show "N/A" instead of a fake 0°.
-    checked = 0.0 if angle is None else angle
-    passed = rule.min_angle <= checked <= rule.max_angle
+    # Undefined geometry (occluded landmark) should NOT flag a false violation
+    if angle is None:
+        return ValidationResult(
+            rule.name, rule.message, rule.severity, True, None, joints=rule.joints
+        )
+    passed = rule.min_angle <= angle <= rule.max_angle
     return ValidationResult(
         rule.name, rule.message, rule.severity, passed, angle, joints=rule.joints
     )
@@ -72,33 +73,6 @@ def evaluate_rom_rule(
     return ValidationResult(rule.name, rule.message, rule.severity, True, angle, joints=rule.joints)
 
 
-def evaluate_distance_rule(
-    rule: DistanceValidationRule,
-    landmarks,
-    width: int,
-    height: int,
-) -> ValidationResult:
-    """Evaluate a DistanceValidationRule based on distance ratios."""
-    pts1 = get_points([rule.point1, rule.point2], landmarks, width, height)
-    pts2 = get_points([rule.reference1, rule.reference2], landmarks, width, height)
-
-    if len(pts1) < 2 or len(pts2) < 2:
-        return ValidationResult(rule.name, rule.message, rule.severity, True, None, joints=())
-
-    distance = calc_distance(pts1[0], pts1[1])
-    reference_distance = calc_distance(pts2[0], pts2[1])
-
-    if reference_distance == 0:
-        return ValidationResult(rule.name, rule.message, rule.severity, True, None, joints=())
-
-    ratio = distance / reference_distance
-    passed = rule.min_ratio <= ratio <= rule.max_ratio
-
-    return ValidationResult(
-        rule.name, rule.message, rule.severity, passed, ratio, joints=(rule.point1, rule.point2)
-    )
-
-
 def validate_all(
     rules: Iterable,
     landmarks,
@@ -113,11 +87,12 @@ def validate_all(
     """
     results = []
     for rule in rules:
-        if isinstance(rule, AngleROMValidationRule):
+        if rule.__class__.__name__ in ("ShrugValidationRule", "WristLevelValidationRule", "DistanceValidationRule"):
+            from ..services.additional_casses import evaluate_custom_rule
+            results.append(evaluate_custom_rule(rule, landmarks, width, height, states))
+        elif isinstance(rule, AngleROMValidationRule):
             state = (states or {}).get(rule.name)
             results.append(evaluate_rom_rule(rule, landmarks, width, height, state))
-        elif isinstance(rule, DistanceValidationRule):
-            results.append(evaluate_distance_rule(rule, landmarks, width, height))
         else:
             results.append(evaluate_rule(rule, landmarks, width, height))
     return results

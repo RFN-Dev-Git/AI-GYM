@@ -12,7 +12,7 @@ from ..core import Colors
 from ..exercises.exercise import Exercise
 from ..exercises.validation import ValidationResult, validate_all, violations
 from ..utils.geometry import ComputedAngle, calc_angle, get_points
-from ..utils.render import draw_angle_arc, draw_angle_labels, draw_skeleton, draw_stats, fit_to_screen, draw_wrist_line
+from ..utils.render import draw_angle_arc, draw_angle_labels, draw_skeleton, draw_stats, fit_to_screen
 from ..utils.camera_side import CameraSideDetector
 from .pose_service import PoseService
 from .rep_counter import RepCounter
@@ -53,8 +53,6 @@ class GymEngine:
         self.display_width = display_width
         self.side_detector = CameraSideDetector(30) if exercise.camera == "side" else None
         self.rules_adapted = False if exercise.camera == "side" else True
-        # Track distance violations during current rep for shoulder press
-        self._distance_violation_in_current_rep = False
 
     # ------------------------------------------------------------------
     # Analysis: pure logic, no I/O -> easy to unit test with fake landmarks.
@@ -100,46 +98,42 @@ class GymEngine:
         prev_good  = self.counter.primary.good
         prev_count = self.counter.primary.count
 
-        # Track distance violations for shoulder press
-        if self.exercise.name == "Shoulder Press":
-            if "left_shoulder_wrist_distance" in violation_names:
-                self._distance_violation_in_current_rep = True
-            # Reset flag when rep completes (checked below)
-            if self.counter.primary.stage == "up" and prev_count == self.counter.primary.count:
-                # We're in up stage but no new rep counted, so reset the flag
-                self._distance_violation_in_current_rep = False
-
         self.counter.update(angles, violation_names)
 
         if self.counter.primary.count > prev_count:
-            # Rep just completed - check if there was a distance violation
-            if self.exercise.name == "Shoulder Press" and self._distance_violation_in_current_rep:
-                # Force this rep to be bad
-                self.judge.finalize_rep(
-                    self.counter.primary.count,
-                    frame,
-                    force_good=False,
-                )
-                self._distance_violation_in_current_rep = False
-            else:
-                rep_was_good = self.counter.primary.good > prev_good
-                if self.counter.primary.speed_warning:
-                    # Inject a speed violation warning
-                    from ..exercises.validation import ValidationResult
-                    self.judge.observe([
-                        ValidationResult(
-                            rule_name=self.exercise.counter_rules[0].name + "_too_fast",
-                            message="Too fast — control the movement",
-                            severity="warning",
-                            passed=False,
-                            angle=None
-                        )
-                    ], frame)
-                self.judge.finalize_rep(
-                    self.counter.primary.count,
-                    frame,
-                    force_good=rep_was_good,
-                )
+            rep_was_good = self.counter.primary.good > prev_good
+            # Inject speed warning if applicable
+            if self.counter.primary.speed_warning:
+                from ..exercises.validation import ValidationResult
+                self.judge.observe([
+                    ValidationResult(
+                        rule_name=self.exercise.counter_rules[0].name + "_too_fast",
+                        message="Too fast — control the movement",
+                        severity="warning",
+                        passed=False,
+                        angle=None
+                    )
+                ], frame)
+            # Inject ROM warning if applicable
+            rom_msg = getattr(self.counter.primary, "rom_warning_msg", None)
+            if rom_msg:
+                from ..exercises.validation import ValidationResult
+                self.judge.observe([
+                    ValidationResult(
+                        rule_name=self.exercise.counter_rules[0].name + "_rom_bad",
+                        message=rom_msg,
+                        severity="warning",
+                        passed=False,
+                        angle=None
+                    )
+                ], frame)
+                self.counter.primary.rom_warning_msg = None
+
+            self.judge.finalize_rep(
+                self.counter.primary.count,
+                frame,
+                force_good=rep_was_good,
+            )
 
         return FrameResult(
             angles=angles, states=self.counter.states, results=results, views=views
@@ -177,17 +171,33 @@ class GymEngine:
 
             # Validation-rule skeletons (e.g. back angle for deadlift).
             # Can be suppressed per-exercise via DisplaySettings.show_validation_skeleton.
-            # For shoulder press, only show arm joints (no validation skeletons)
-            if show.show_validation_skeleton and self.exercise.name != "Shoulder Press":
+            if show.show_validation_skeleton:
                 for rule in self.exercise.validation_rules:
-                    # Only draw skeletons for rules with joints attribute (AngleValidationRule)
-                    if hasattr(rule, 'joints'):
-                        joints_key = tuple(sorted(rule.joints))
-                        if joints_key not in drawn_joints:
-                            pts = get_points(rule.joints, landmarks, width, height)
-                            if len(pts) >= 3:
-                                draw_skeleton(frame, pts, self.colors, is_bad=bad)
-                                drawn_joints.add(joints_key)
+                    # Skip custom rule types that have specific rendering logic
+                    if rule.__class__.__name__ in ("ShrugValidationRule", "WristLevelValidationRule"):
+                        continue
+                    joints_key = tuple(sorted(rule.joints))
+                    if joints_key not in drawn_joints:
+                        pts = get_points(rule.joints, landmarks, width, height)
+                        if len(pts) >= 3:
+                            draw_skeleton(frame, pts, self.colors, is_bad=bad)
+                            drawn_joints.add(joints_key)
+
+        # Custom validation overlays (Lateral Raise specific)
+        for res in result.results:
+            if not res.passed:
+                if res.rule_name == "shrug":
+                    p11 = get_points((11,), landmarks, width, height)
+                    p12 = get_points((12,), landmarks, width, height)
+                    if p11 and p12:
+                        cv2.line(frame, p11[0], p12[0], self.colors.ERROR, 6)
+                elif res.rule_name == "wrist_level":
+                    p15 = get_points((15,), landmarks, width, height)
+                    p16 = get_points((16,), landmarks, width, height)
+                    if p15:
+                        cv2.circle(frame, p15[0], 12, self.colors.ERROR, -1)
+                    if p16:
+                        cv2.circle(frame, p16[0], 12, self.colors.ERROR, -1)
 
         # Live angle arcs for each counter rule (visual only; the numeric
         # value is drawn by draw_angle_labels for EVERY computed angle).
@@ -200,25 +210,6 @@ class GymEngine:
         # Floating angle label for EVERY computed angle (counter + validation),
         # positioned at the rule's vertex joint. Fully automatic & rule-agnostic.
         draw_angle_labels(frame, result.views, self.colors, width, height)
-
-        # Custom rendering for shoulder press: draw wrist line when both arms are up
-        if self.exercise.name == "Shoulder Press":
-            left_shoulder_angle = result.angles.get("left_shoulder")
-            right_shoulder_angle = result.angles.get("right_shoulder")
-            # Only show line when both shoulder angles > 90 (arms actually up)
-            if left_shoulder_angle and right_shoulder_angle:
-                if left_shoulder_angle > 90 and right_shoulder_angle > 90:
-                    # Check if distance validation failed
-                    distance_failed = any(
-                        r.rule_name == "left_shoulder_wrist_distance" and not r.passed
-                        for r in result.results
-                    )
-                    line_color = self.colors.ERROR if distance_failed else self.colors.HIGHLIGHT
-                    from ..core.pose_segments import L_WRIST, R_WRIST
-                    left_wrist_pt = get_points([L_WRIST], landmarks, width, height)
-                    right_wrist_pt = get_points([R_WRIST], landmarks, width, height)
-                    if left_wrist_pt and right_wrist_pt:
-                        draw_wrist_line(frame, left_wrist_pt[0], right_wrist_pt[0], self.colors, line_color)
 
         # Stats / coaching panel: a fixed bottom-left overlay (not anchored to
         # any body landmark). Layout lives in utils/render.py. Rep-quality

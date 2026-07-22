@@ -11,6 +11,7 @@ from typing import Dict, List
 
 from .biceps_curl import BicepsCurlExercise
 from .cable_chest_fly import CableChestFlyExercise
+from .cable_straight_arm_pulldown import CableStraightArmPulldownExercise
 from .deadlift import DeadliftExercise
 from .exercise import Exercise
 from .latpulldown import LatPulldownExercise
@@ -18,6 +19,7 @@ from .leg import HackSquatExercise, LegPressExercise
 from .pushup import PushUpExercise
 from .shoulder_press import ShoulderPressExercise
 from .squat import SquatExercise
+from .lateral_raise import LateralRaiseExercise
 
 
 class UnknownExerciseError(Exception):
@@ -88,3 +90,5 @@ registry.register("lat_pulldown", LatPulldownExercise())
 registry.register("leg_press", LegPressExercise())
 registry.register("hack_squat", HackSquatExercise())
 registry.register("shoulder_press", ShoulderPressExercise())
+registry.register("cable_arm", CableStraightArmPulldownExercise())
+registry.register("lateral_raise", LateralRaiseExercise())

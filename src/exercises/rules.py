@@ -27,8 +27,6 @@ class AngleCounterRule:
         down_angle:  Angle (deg) that marks the "down" / bottom of a rep.
         up_stage:    Label applied while at/above ``up_angle`` (default "up").
         down_stage:  Label applied while at/below ``down_angle`` (default "down").
-        sync_group:  Optional group name for synchronized multi-rule counting.
-                     Rules with the same sync_group must reach thresholds together.
 
     ``up_stage`` / ``down_stage`` exist so the stage vocabulary is configurable
     ("up"/"down" today, but a future exercise could use different labels or a
@@ -44,7 +42,8 @@ class AngleCounterRule:
     rom_min_angle: float | None = None
     rom_max_angle: float | None = None
     min_rep_frames: int = 0   # minimum frames a rep must span (0 = no check)
-    sync_group: str | None = None  # optional synchronization group
+    sync_group: str | None = None   # optional group name to sync bilateral reps
+    complete_on_return: bool = False  # if True, rep completes when RETURNING to rest (e.g. lateral raise)
 
 
 @dataclass(frozen=True)
@@ -95,26 +94,34 @@ class AngleROMValidationRule:
 
 @dataclass(frozen=True)
 class DistanceValidationRule:
-    """Describes a validation rule based on distance between two landmarks.
+    """Validates that the distance between two points stays within a ratio range.
 
-    Attributes:
-        name:         Stable id.
-        point1:       First landmark index.
-        point2:       Second landmark index.
-        min_ratio:    Minimum acceptable ratio (point1-point2 distance / reference distance).
-        max_ratio:    Maximum acceptable ratio (point1-point2 distance / reference distance).
-        reference1:   First reference landmark index for ratio calculation.
-        reference2:   Second reference landmark index for ratio calculation.
-        message:      Human-readable coaching cue shown when the rule fails.
-        severity:     "error" | "warning" | "info" — drives feedback emphasis.
+    The ratio is computed as: EuclideanDistance(point1, point2) / EuclideanDistance(reference1, reference2)
     """
-
     name: str
-    point1: int
-    point2: int
-    min_ratio: float
-    max_ratio: float
-    reference1: int
-    reference2: int
+    point1: int          # Landmark index of first point
+    point2: int          # Landmark index of second point
+    min_ratio: float     # Minimum acceptable distance ratio
+    max_ratio: float     # Maximum acceptable distance ratio
+    reference1: int      # Landmark index for reference distance start
+    reference2: int      # Landmark index for reference distance end
+    message: str
+    severity: Severity = "error"
+    joints: tuple = ()   # Kept for rendering compatibility
+
+
+@dataclass(frozen=True)
+class ShrugValidationRule:
+    """Detects trap shrugging / shoulder elevation using torso height delta."""
+    name: str
+    message: str
+    threshold: float = 0.08
+    severity: Severity = "error"
+
+
+@dataclass(frozen=True)
+class WristLevelValidationRule:
+    """Ensures wrists stay below or at the level of shoulders during abduction."""
+    name: str
     message: str
     severity: Severity = "error"
