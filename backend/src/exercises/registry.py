@@ -11,9 +11,11 @@ from typing import Dict, List
 
 from .biceps_curl import BicepsCurlExercise
 from .cable_chest_fly import CableChestFlyExercise
+from .cable_straight_arm_pulldown import CableStraightArmPulldownExercise
 from .deadlift import DeadliftExercise
 from .exercise import Exercise
 from .latpulldown import LatPulldownExercise
+from .lateral_raise import LateralRaiseExercise
 from .leg import HackSquatExercise, LegPressExercise
 from .pushup import PushUpExercise
 from .shoulder_press import ShoulderPressExercise
@@ -78,13 +80,17 @@ class ExerciseRegistry:
 # Module-level singleton pre-populated with the built-in exercises. Importing
 # this module is enough to make every shipped exercise available; GymEngine and
 # the CLI simply ask the registry for what they need.
+# Merged: original 9 exercises + 2 new from friend (cable_straight_arm_pulldown, lateral_raise) + 3D support
 registry = ExerciseRegistry()
 registry.register("deadlift", DeadliftExercise())
 registry.register("cable_chest_fly", CableChestFlyExercise())
+registry.register("cable_arm", CableStraightArmPulldownExercise())  # friend's new - straight arm pulldown
+registry.register("cable_straight_arm_pulldown", CableStraightArmPulldownExercise())  # alias
 registry.register("squat", SquatExercise())
 registry.register("pushup", PushUpExercise())
 registry.register("biceps_curl", BicepsCurlExercise())
 registry.register("lat_pulldown", LatPulldownExercise())
+registry.register("lateral_raise", LateralRaiseExercise())  # friend's new - lateral raise with shrug detection
 registry.register("leg_press", LegPressExercise())
 registry.register("hack_squat", HackSquatExercise())
 registry.register("shoulder_press", ShoulderPressExercise())

@@ -73,11 +73,13 @@ function Field({
 }
 
 /** Keys rendered in the form, grouped (order = presentation order). */
-const EDITABLE: { key: string; label: string; hint: string; kind: "bool" | "text" | "number" | "path"; section: "capture" | "output" | "analytics" }[] = [
+const EDITABLE: { key: string; label: string; hint: string; kind: "bool" | "text" | "number" | "path"; section: "capture" | "output" | "analytics" | "3d" }[] = [
   { key: "USE_WEBCAM", label: "Use webcam by default", hint: "Off = analyze a video file from disk", kind: "bool", section: "capture" },
   { key: "WEBCAM_INDEX", label: "Webcam index", hint: "0 is usually the built-in camera", kind: "number", section: "capture" },
   { key: "VIDEO_PATH", label: "Video path (CLI/dev)", hint: "Engine CLI fallback when the webcam is off — the web app uploads videos instead", kind: "path", section: "capture" },
   { key: "MODEL_PATH", label: "Pose model", hint: "BlazePose .task file", kind: "path", section: "capture" },
+  { key: "USE_3D", label: "Enable 3D pose analysis", hint: "ON = world landmarks (camera independent, +30% accuracy, recommended). OFF = 2D legacy (faster). Drawing is always 2D.", kind: "bool", section: "3d" },
+  { key: "ENABLE_SMOOTHING", label: "Enable 3D smoothing", hint: "OneEuroFilter to reduce z jitter in 3D mode. Keep ON when USE_3D is ON.", kind: "bool", section: "3d" },
   { key: "SAVE_OUTPUT", label: "Save annotated video", hint: "Write the rendered session to disk", kind: "bool", section: "output" },
   { key: "OUTPUT_PATH", label: "Output video path", hint: "Where annotated videos go", kind: "path", section: "output" },
   { key: "ANALYTICS_FPS", label: "Analytics FPS", hint: "Frame rate used for rep timing", kind: "number", section: "analytics" },
@@ -138,6 +140,7 @@ export function SettingsPage() {
 
   const sections = [
     { id: "capture", title: "Capture", icon: Video, description: "Which camera or video feeds the coach" },
+    { id: "3d", title: "3D Analysis", icon: Settings2, description: "Full 3D pose (world landmarks) vs 2D legacy - 3D is camera independent" },
     { id: "output", title: "Output", icon: Save, description: "Annotated video rendering" },
     { id: "analytics", title: "Analytics", icon: Settings2, description: "Session statistics engine" },
   ] as const;

@@ -80,7 +80,7 @@ layout + review), not by a lint rule.
 ### Design philosophy (as evidenced by the code)
 
 - **Backend is the source of truth.** The UI never invents fields: exercise
-  cards render only data the registry exposes (e.g. there is deliberately *no*
+  cards render only data the registry exposes (e.g. there is deliberately _no_
   "difficulty" badge because no such backend field exists). `types.ts` mirrors
   the exported session-report JSON verbatim and says so in its header comment.
 - **Server state ≠ client state.** Server data lives exclusively in
@@ -99,19 +99,19 @@ layout + review), not by a lint rule.
 
 ### Technology stack (from `package.json`)
 
-| Layer | Choice | Version |
-|---|---|---|
-| UI runtime | `react` / `react-dom` | ^18.3.1 (StrictMode on) |
-| Language | `typescript` | ^5.7.2, **strict** + `noUnusedLocals` + `noUnusedParameters` |
-| Build | `vite` + `@vitejs/plugin-react` | ^6.0.7 / ^4.3.4 |
-| Routing | `react-router-dom` | ^6.28.1 |
-| Server cache | `@tanstack/react-query` | ^5.62.11 |
-| Styling | `tailwindcss` + autoprefixer | ^3.4.17 (class-based dark mode) |
-| Charts | `recharts` | ^2.15.0 |
-| Animation | `framer-motion` | ^11.15.0 |
-| Icons | `lucide-react` | ^0.469.0 |
-| Primitives | `@radix-ui/react-dialog` / `-slot` / `-tooltip` | ^1.1.x |
-| Class utils | `clsx`, `tailwind-merge`, `class-variance-authority` | ^2.1.1 / ^2.6.0 / ^0.7.1 |
+| Layer        | Choice                                               | Version                                                      |
+| ------------ | ---------------------------------------------------- | ------------------------------------------------------------ |
+| UI runtime   | `react` / `react-dom`                                | ^18.3.1 (StrictMode on)                                      |
+| Language     | `typescript`                                         | ^5.7.2, **strict** + `noUnusedLocals` + `noUnusedParameters` |
+| Build        | `vite` + `@vitejs/plugin-react`                      | ^6.0.7 / ^4.3.4                                              |
+| Routing      | `react-router-dom`                                   | ^6.28.1                                                      |
+| Server cache | `@tanstack/react-query`                              | ^5.62.11                                                     |
+| Styling      | `tailwindcss` + autoprefixer                         | ^3.4.17 (class-based dark mode)                              |
+| Charts       | `recharts`                                           | ^2.15.0                                                      |
+| Animation    | `framer-motion`                                      | ^11.15.0                                                     |
+| Icons        | `lucide-react`                                       | ^0.469.0                                                     |
+| Primitives   | `@radix-ui/react-dialog` / `-slot` / `-tooltip`      | ^1.1.x                                                       |
+| Class utils  | `clsx`, `tailwind-merge`, `class-variance-authority` | ^2.1.1 / ^2.6.0 / ^0.7.1                                     |
 
 Build gate: `npm run build` = `tsc --noEmit -p tsconfig.json && vite build`
 (type-check is a hard gate, not a separate step). Dev proxy: `/api` →
@@ -176,6 +176,7 @@ frontend/
 ### Folder-by-folder
 
 #### `src/lib/`
+
 **Purpose:** dependency-free (or near-free) utilities and the entire backend
 coupling seam.
 **Responsibilities:** class merging (`utils.ts`), every display-formatting
@@ -184,6 +185,7 @@ decision (`format.ts` — components never format dates/scores inline).
 `components/`, `providers/`, or `features/`.
 
 #### `src/schemas/`
+
 **Purpose:** the shared **data-model layer** — every backend-facing
 TypeScript interface (`index.ts`), mirroring backend payloads exactly.
 **Responsibilities:** types only; zero runtime code; imports nothing.
@@ -192,18 +194,20 @@ client, and pages; promoted out of `lib/api/` in the production-structure
 refactor so models stand independent of the transport layer.
 
 #### `src/lib/api/`
+
 **Purpose:** the **only** place that knows the backend exists (transport).
 **Responsibilities:** endpoint URLs, request/response handling, error typing
 (`ApiError` + `errorDetailMessage`), WebSocket protocol, uploads. Query/
 mutation hooks (`useExercises`, `useSessions`, `useUploads`, …) are thin
-wrappers, so pages consume *typed hooks*, never `fetch` directly. The
-response *shapes* these hooks type against live in `schemas/`.
+wrappers, so pages consume _typed hooks_, never `fetch` directly. The
+response _shapes_ these hooks type against live in `schemas/`.
 **Important files:** `client.ts` (the transport), `live.ts` (the stream),
 `uploads.ts` (XHR upload).
 **Relationships:** imports types from `schemas/`; otherwise `@tanstack/
 react-query` only. No file here imports React components.
 
 #### `src/providers/`
+
 **Purpose:** two minimal React contexts.
 **Responsibilities:** theme state (dark/light + localStorage) and toast
 notifications (the only app-wide client-side messaging bus).
@@ -212,8 +216,9 @@ notifications (the only app-wide client-side messaging bus).
 (toasts); `toast.tsx` itself renders with `framer-motion` + `ui/` classes.
 
 #### `src/components/ui/`
+
 **Purpose:** the design system primitives — 8 tiny components in the
-shadcn/ui *style* (cva variants, `cn()`, forwardRef, Radix wrappers) but
+shadcn/ui _style_ (cva variants, `cn()`, forwardRef, Radix wrappers) but
 **hand-maintained in-repo**, not generated.
 **Files:** `button.tsx` (cva: 5 variants × 4 sizes, `asChild` via Radix Slot),
 `card.tsx` (Card/CardHeader/CardTitle/CardDescription/CardContent),
@@ -224,20 +229,23 @@ Dialog wrapper), `tooltip.tsx` (Radix Tooltip wrapper + provider re-export).
 page, `providers/toast`, `components/shared`.
 
 #### `src/components/`
+
 **Purpose:** cross-page composite components.
-- `shared.tsx` — `EmptyState` (uniform icon+title+hint+CTA used by *every*
+
+- `shared.tsx` — `EmptyState` (uniform icon+title+hint+CTA used by _every_
   error/empty state), `StatCard` (KPI tile), `ScoreRing` (SVG circular score
   gauge — no chart lib).
 - `layout/app-shell.tsx` — the application frame (see §4).
-**Relationships:** sits above `ui/`, below `features/`.
+  **Relationships:** sits above `ui/`, below `features/`.
 
 #### `src/features/<page>/`
+
 **Purpose:** one folder **per route**, containing the page component plus any
 page-local sub-components/hooks — co-location over type-folders.
 **Relationships:** pages consume `lib/api` hooks and `components/*`; they
 **never import each other's internals across features**, with one sanctioned
 exception: `dashboard/page.tsx` reuses `exercises/exercise-card.tsx` for its
-"Quick start" grid (a deliberately *shared* public component of that feature).
+"Quick start" grid (a deliberately _shared_ public component of that feature).
 
 ---
 
@@ -245,23 +253,23 @@ exception: `dashboard/page.tsx` reuses `exercises/exercise-card.tsx` for its
 
 ### Bootstrap
 
-**`src/main.tsx`** — *Why it exists:* single composition root. *Exports:*
-nothing (side-effect only). *Renders:* `QueryClientProvider` (one global
+**`src/main.tsx`** — _Why it exists:_ single composition root. _Exports:_
+nothing (side-effect only). _Renders:_ `QueryClientProvider` (one global
 `QueryClient` with `retry: 1, refetchOnWindowFocus: false`) → `ThemeProvider`
 → `TooltipProvider` (`delayDuration={200}`, required by Radix tooltips) →
-`ToastProvider` → `<App/>`, all under `React.StrictMode`. *Separated* so
+`ToastProvider` → `<App/>`, all under `React.StrictMode`. _Separated_ so
 provider wiring is owned in exactly one place.
 
-**`src/App.tsx`** — *Why:* routing table, nothing else. *Exports:* default
-`App`. *Notable:* `DashboardPage` and `ReportPage` are `React.lazy` (they pull
+**`src/App.tsx`** — _Why:_ routing table, nothing else. _Exports:_ default
+`App`. _Notable:_ `DashboardPage` and `ReportPage` are `React.lazy` (they pull
 in recharts); everything else is eagerly imported. Defines the inline
-`PageFallback` (3 skeletons) shown while lazy chunks load. *Used by:*
+`PageFallback` (3 skeletons) shown while lazy chunks load. _Used by:_
 `main.tsx` only.
 
-**`src/index.css`** — *Why:* the design tokens. Two `@layer base` blocks
+**`src/index.css`** — _Why:_ the design tokens. Two `@layer base` blocks
 define the full HSL CSS-variable palette for `.dark` and `:root:not(.dark)`;
 a second block applies global element defaults (`border-border`, body
-colors); ends with a `.slim-scroll` scrollbar utility. *Consumed by:*
+colors); ends with a `.slim-scroll` scrollbar utility. _Consumed by:_
 Tailwind's `theme.extend.colors` maps these vars (e.g. `bg-primary` →
 `hsl(var(--primary))`), so **the palette swaps per theme without touching a
 single component**.
@@ -271,7 +279,7 @@ single component**.
 **`src/lib/utils.ts`** — exports `cn(...)` = `twMerge(clsx(inputs))`. The
 shadcn convention: variants pass `className` overrides safely.
 
-**`src/lib/format.ts`** — six pure formatters, the *only* home for display
+**`src/lib/format.ts`** — six pure formatters, the _only_ home for display
 logic:
 | Export | Behaviour |
 |---|---|
@@ -303,13 +311,14 @@ interceptors/auth/retry — Query handles retry, and there is no auth yet.
 **`src/lib/api/sessions.ts`** — `useSessions()` (list),
 `useSession(id)` (full report, `enabled: Boolean(id)`),
 `useDeleteSession()` (mutation; `onSuccess` invalidates `["sessions"]` — the
-list *and* any cached report under that prefix).
+list _and_ any cached report under that prefix).
 
 **`src/lib/api/settings.ts`** — `useSettings()`, `useUpdateSettings()`
 (PUT; `onSuccess` writes the server's authoritative response straight into
 cache via `qc.setQueryData`, so the form reflects what actually persisted).
 
 **`src/lib/api/live.ts`** — `LiveClient`: thin phrasing over `WebSocket`.
+
 - `connect(exercise, source, callbacks, video?)` — builds
   `ws(s)://<location.host>/ws/live?exercise=…&source=…[&video=…]`
   (host-relative: works identically through the Vite proxy and in production
@@ -317,8 +326,8 @@ cache via `qc.setQueryData`, so the form reflects what actually persisted).
   `onMessage(JSON.parse)`, binary → `onFrame(blob)`; `onclose` → `onClose`.
 - `stop()` — sends `{"action":"stop"}` only when `OPEN`.
 - `disconnect()`; `connected` getter.
-The doc-comment states the rule that shaped it: *"binary frames carry video,
-text frames carry metrics — keeping heavy pixels out of the JSON path."*
+  The doc-comment states the rule that shaped it: _"binary frames carry video,
+  text frames carry metrics — keeping heavy pixels out of the JSON path."_
 
 ### providers
 
@@ -326,8 +335,8 @@ text frames carry metrics — keeping heavy pixels out of the JSON path."*
 `{ theme: "dark" | "light", toggle() }`. Initial value: `localStorage["theme"]`
 or `"dark"` (dark-first; **no `prefers-color-scheme` detection** — deliberate
 or at least actual). Effect toggles `document.documentElement.classList.dark`
-and persists. 〔note〕The provider sits *under* QueryClientProvider but owns
-pure client state; it is deliberately *not* server-synced ("until real
+and persists. 〔note〕The provider sits _under_ QueryClientProvider but owns
+pure client state; it is deliberately _not_ server-synced ("until real
 preferences exist", per its own comment).
 
 **`src/providers/toast.tsx`** — `ToastProvider` / `useToast()` →
@@ -335,7 +344,7 @@ preferences exist", per its own comment).
 `useState`; each toast auto-dismisses after **3.5 s** via `setTimeout`, renders
 fixed bottom-right (`z-[60]`) with `framer-motion` enter/exit
 (`AnimatePresence`), success/destructive icon, manual ✕ button.
-This is the *only* cross-page notification mechanism (used by live page,
+This is the _only_ cross-page notification mechanism (used by live page,
 history delete, settings save).
 
 ### components
@@ -349,8 +358,9 @@ free); `progress.tsx` explicitly avoids a dependency.
 `data-[state]` attributes) — no `tailwindcss-animate` dependency needed.
 
 **`components/shared.tsx`**
+
 - `EmptyState({icon,title,hint?,action?,className?})` — the uniform
-  empty/error body used by *all* pages (backend unreachable, no sessions, 404).
+  empty/error body used by _all_ pages (backend unreachable, no sessions, 404).
 - `StatCard({label,value,hint?,icon?,valueClassName?})` — KPI tile
   (uppercase label + `text-2xl font-bold tabular-nums` value).
 - `ScoreRing({score,size=148,label="Score"})` — **hand-drawn SVG** gauge:
@@ -360,7 +370,8 @@ free); `progress.tsx` explicitly avoids a dependency.
   Exists so simple gauges never pull a chart dependency.
 
 **`components/layout/app-shell.tsx`** — the frame every route renders inside
-(it's the layout *route* in `App.tsx`):
+(it's the layout _route_ in `App.tsx`):
+
 - `NAV`: Dashboard `/` (`end`), Exercises `/exercises`, History `/sessions`,
   Settings `/settings` — each `NavLink` paints `bg-primary/10 text-primary`
   when active.
@@ -377,7 +388,7 @@ free); `progress.tsx` explicitly avoids a dependency.
 from `useSessions()` (one query); `useExercises()` only feeds "Quick start".
 A local `mean()` helper + one `useMemo` builds the `stats` object (§9). Handles
 `isLoading` (skeleton grid), `isError` (`EmptyState` "Backend unreachable" +
-Retry), zero sessions (hero `EmptyState`). *Separated* because it's the
+Retry), zero sessions (hero `EmptyState`). _Separated_ because it's the
 heaviest read-only aggregator.
 
 **`features/exercises/page.tsx`** — `ExercisesPage`. Local state:
@@ -393,14 +404,14 @@ slot**: `exercise.image` renders `<img>` if ever non-null, otherwise a branded
 `<Dumbbell>` placeholder (the backend currently always returns `image: null` —
 marked "forward slot" on both sides). Camera badge ("Side view"/"Front view"),
 ≤3 muscle badges, `<Scan>` rules-count badge, and `Start session` →
-`/live/:id`. *Exported deliberately* (used by dashboard quick-start — the one
+`/live/:id`. _Exported deliberately_ (used by dashboard quick-start — the one
 cross-feature import).
 
 **`features/live/page.tsx`** — `LivePage`: a lifecycle-driven coaching
 room (details §8/§9-of-live below). Owns the source-picker state (`source`,
 chosen `File`, re-picked `previousId`, `uploadPct`, the picked file's probed
 dimensions `probeSize`, upload-removal confirmation) plus `lastArgs` (exact
-start arguments, so the error overlay can retry the *identical* session) and
+start arguments, so the error overlay can retry the _identical_ session) and
 the `begin()` orchestration (upload → `start("video", "upload:<id>")`), the
 `retry()`/`newWorkout()` (reset) transitions, and the picked-file metadata
 probe (`<video preload=metadata>` → intrinsic size, object URL revoked
@@ -431,7 +442,7 @@ intrinsic `frameSize` (published once per resolution change — the stage's
 aspect-ratio follows it so any video resolution/portrait clip fits without
 stretching or cropping), measures wall-clock `processingSeconds`
 (start→end) for the completion summary, and `reset()` returns the UI to the
-setup step without navigation. *Separated from the page* so connection
+setup step without navigation. _Separated from the page_ so connection
 lifecycle, canvas painting, and React state bridging stay isolated.
 
 **`features/live/lifecycle.ts`** — pure lifecycle model (no React, no IO):
@@ -455,17 +466,18 @@ summary + actions column owns the post-workout screen.
 
 **`features/live/completed.tsx`** — the post-workout column. `WorkoutSummary`
 is the large view that replaces the finished video in the stage area: header
-+ score ring + Reps / Good / Bad / Accuracy / Duration / Processing stat
-cards (prefer the exported report via the existing `useSession` query; fall
-back to the `end` payload, then the last live frame when no report exists) +
-export/render caveats. `WorkoutActions` renders directly under the summary
-box — "View full report" (Link, explicit navigation only), "Download JSON"
-(client-side Blob download of `GET /api/sessions/:id` via
-`downloadSessionReport`), "Download video", "Start new workout" (in-place
-reset). While `ended` the whole workout grid steps aside — stage, telemetry,
-feedback and Form checks all unmount — and this centered column is the only
-thing on screen, so no summary element can be duplicated. Handles a null
-result (dropped stream) and a missing session_id gracefully.
+
+- score ring + Reps / Good / Bad / Accuracy / Duration / Processing stat
+  cards (prefer the exported report via the existing `useSession` query; fall
+  back to the `end` payload, then the last live frame when no report exists) +
+  export/render caveats. `WorkoutActions` renders directly under the summary
+  box — "View full report" (Link, explicit navigation only), "Download JSON"
+  (client-side Blob download of `GET /api/sessions/:id` via
+  `downloadSessionReport`), "Download video", "Start new workout" (in-place
+  reset). While `ended` the whole workout grid steps aside — stage, telemetry,
+  feedback and Form checks all unmount — and this centered column is the only
+  thing on screen, so no summary element can be duplicated. Handles a null
+  result (dropped stream) and a missing session_id gracefully.
 
 **`features/history/page.tsx`** — `HistoryPage`. Local state: `query`, `sort`
 (`"date"|"score"|"reps"`), `exerciseFilter`, `confirm` (session pending
@@ -490,7 +502,7 @@ numbers/format chips carry facts, one-line imperatives carry coaching:
   legacy-null-safe). Unit-tested (esbuild node: 48 assertions).
 - `range-gauge.tsx` — measurement indicator (green target zone, bound
   ticks, verdict-colored marker); used in rep evaluations.
-- `timeline.tsx` — **RepTimeline**: a slim interactive strip *inside* the
+- `timeline.tsx` — **RepTimeline**: a slim interactive strip _inside_ the
   Repetition history card (no card chrome of its own): rep segments
   proportional to session time, error-count bubbles on failing reps,
   native-hover details, and clicking a segment toggles that rep's
@@ -511,17 +523,16 @@ long personalized form (`recommendationFor`) stays in the module for
 detail-level copy; Rule-statistics messages wrap (`line-clamp-2`); header
 gains a Download-JSON action.
 
-
-**`features/settings/page.tsx`** — `SettingsPage`. The only page that *writes*
+**`features/settings/page.tsx`** — `SettingsPage`. The only page that _writes_
 config. Local state: `form` (string|boolean map), `dirty`. Declarative
 `EDITABLE` array = the 9 editable keys with label/hint/kind/section (capture /
 output / analytics); renders `Toggle` (custom switch, `role="switch"`) or
 `Field` per kind. `save()` coerces numbers, drops empty strings (〔quirk〕you
-therefore *cannot clear* `VIDEO_PATH` to empty via the UI — empty input is
+therefore _cannot clear_ `VIDEO_PATH` to empty via the UI — empty input is
 treated as "no change"), PUTs, toasts. Also hosts the **frontend-local**
 Appearance card (theme toggle — not a backend setting). Footer note states the
-rule explicitly: exercise rules/thresholds are backend code and *intentionally
-not editable here*.
+rule explicitly: exercise rules/thresholds are backend code and _intentionally
+not editable here_.
 
 **`features/not-found.tsx`** — `NotFoundPage`: `EmptyState` + back-to-dashboard
 CTA for the `*` route.
@@ -589,10 +600,10 @@ QueryClientProvider                      (main.tsx — server cache)
   `use-live-session` invalidates `["sessions"]` so History/Dashboard are fresh
   on return).
 - **Global client state:** only `theme` (used by AppShell, Settings) and
-  `toasts` (used by Live, History, Settings) flow *sideways* via context.
+  `toasts` (used by Live, History, Settings) flow _sideways_ via context.
 - **Live feature:** unidirectional — WS → `LiveClient` callbacks →
   `useLiveSession` setState/refs → `LivePage` props-in-JSX. The canvas is
-  written *outside* React entirely (ref + `drawImage`).
+  written _outside_ React entirely (ref + `drawImage`).
 - **Everything else** is local `useState` confined to its page (filters,
   dialog, accordion, settings form).
 
@@ -603,15 +614,15 @@ QueryClientProvider                      (main.tsx — server cache)
 Defined once in `App.tsx` (`BrowserRouter`), all children of the `AppShell`
 layout route:
 
-| Path | Page | Load | Why it exists |
-|---|---|---|---|
-| `/` | `DashboardPage` | **lazy** + Suspense skeleton | Landing overview; aggregates history into KPIs/trend; entry point after app open |
-| `/exercises` | `ExercisesPage` | eager | Pick a coached movement; search/filter; gateway to live |
-| `/live/:exerciseId` | `LivePage` | eager (WS-bound; keep it resilient) | The actual workout: realtime video + coaching HUD |
-| `/sessions` | `HistoryPage` | eager | Browse/sort/filter/delete exported reports |
-| `/sessions/:sessionId` | `ReportPage` | **lazy** (heaviest charts) | Deep per-rep analysis of one export |
-| `/settings` | `SettingsPage` | eager | Edit safe backend knobs (.env) + appearance |
-| `*` | `NotFoundPage` | eager | 404 fallback |
+| Path                   | Page            | Load                                | Why it exists                                                                    |
+| ---------------------- | --------------- | ----------------------------------- | -------------------------------------------------------------------------------- |
+| `/`                    | `DashboardPage` | **lazy** + Suspense skeleton        | Landing overview; aggregates history into KPIs/trend; entry point after app open |
+| `/exercises`           | `ExercisesPage` | eager                               | Pick a coached movement; search/filter; gateway to live                          |
+| `/live/:exerciseId`    | `LivePage`      | eager (WS-bound; keep it resilient) | The actual workout: realtime video + coaching HUD                                |
+| `/sessions`            | `HistoryPage`   | eager                               | Browse/sort/filter/delete exported reports                                       |
+| `/sessions/:sessionId` | `ReportPage`    | **lazy** (heaviest charts)          | Deep per-rep analysis of one export                                              |
+| `/settings`            | `SettingsPage`  | eager                               | Edit safe backend knobs (.env) + appearance                                      |
+| `*`                    | `NotFoundPage`  | eager                               | 404 fallback                                                                     |
 
 **Navigation:** sidebar/top-bar `NavLink`s (active styling), plus in-page
 `Link`s: ExerciseCard → `/live/:id` (×2 places: exercises grid, dashboard
@@ -626,7 +637,7 @@ its error overlay.
 
 **Protected routes:** **none** 〔unfinished by design〕. There is no auth
 anywhere (no tokens, no `/me`, no route guards). The deployment assumption is a
-single-user local app (the backend enforces a single *live session* gate; see
+single-user local app (the backend enforces a single _live session_ gate; see
 §7). `BrowserRouter` uses no `basename` — the app expects to be served from `/`.
 
 ---
@@ -639,36 +650,36 @@ Four kinds of state, cleanly separated:
 
 Configured in `main.tsx`: `retry: 1`, `refetchOnWindowFocus: false`.
 
-| QueryKey | Produced by | Content | Freshness/invalidation |
-|---|---|---|---|
-| `["exercises"]` | `useExercises` | `Exercise[]` catalogue | `staleTime: 5 min` |
-| `["sessions"]` | `useSessions` | `SessionListItem[]` (newest first from backend) | invalidated by `useDeleteSession` and by live-session `end` |
-| `["sessions","report",id]` | `useSession` | `SessionReport` (full document) | invalidated with the prefix above |
-| `["settings"]` | `useSettings` | `AppSettings` (9 keys, current values) | `setQueryData` with the PUT response |
+| QueryKey                   | Produced by    | Content                                         | Freshness/invalidation                                      |
+| -------------------------- | -------------- | ----------------------------------------------- | ----------------------------------------------------------- |
+| `["exercises"]`            | `useExercises` | `Exercise[]` catalogue                          | `staleTime: 5 min`                                          |
+| `["sessions"]`             | `useSessions`  | `SessionListItem[]` (newest first from backend) | invalidated by `useDeleteSession` and by live-session `end` |
+| `["sessions","report",id]` | `useSession`   | `SessionReport` (full document)                 | invalidated with the prefix above                           |
+| `["settings"]`             | `useSettings`  | `AppSettings` (9 keys, current values)          | `setQueryData` with the PUT response                        |
 
 Mutations: `useDeleteSession` (DELETE → invalidate), `useUpdateSettings`
 (PUT → cache write-through). No optimistic updates anywhere.
 
 ### 6.2 Context state (hand-rolled, two contexts)
 
-| Context | Value | Mutations | Persistence |
-|---|---|---|---|
-| `ThemeContext` | `{theme: "dark"\|"light", toggle}` | sidebar button, Settings appearance switch | `localStorage["theme"]`; applied as `<html class>` |
-| `ToastContext` | `{push(title, variant)}` | called by Live (saved), History (deleted/error), Settings (saved/error) | none; list lives in provider state, auto-dismiss 3.5 s |
+| Context        | Value                              | Mutations                                                               | Persistence                                            |
+| -------------- | ---------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------ |
+| `ThemeContext` | `{theme: "dark"\|"light", toggle}` | sidebar button, Settings appearance switch                              | `localStorage["theme"]`; applied as `<html class>`     |
+| `ToastContext` | `{push(title, variant)}`           | called by Live (saved), History (deleted/error), Settings (saved/error) | none; list lives in provider state, auto-dismiss 3.5 s |
 
 ### 6.3 Live session state — `useLiveSession` (local to LivePage)
 
-| Field | Type | Meaning |
-|---|---|---|
-| `status` | `"idle"\|"connecting"\|"live"\|"ended"\|"error"` | drives overlay + `StatusPill` (+ `derivePhase`) |
-| `state` | `LiveState \| null` | **latest** metrics packet (reps, stage, angle, fps, feedback, rule states, live_score, side, adapting, elapsed, last_rep) |
-| `result` | `LiveEnd \| null` | terminal `{reps, session_id?, export_error?, rendered_video?, rendered_error?}` |
-| `error` | `string \| null` | server error-event message |
-| `frameSize` | `{w,h} \| null` | streamed frame's intrinsic size (published once per change) → stage aspect-ratio |
-| `processingSeconds` | `number \| null` | wall-clock start→end, shown in the completion summary |
-| refs: `clientRef`, `canvasRef`, `startedAtRef`, `frameSizeRef` | — | imperative handles kept **out** of render state |
+| Field                                                          | Type                                             | Meaning                                                                                                                   |
+| -------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `status`                                                       | `"idle"\|"connecting"\|"live"\|"ended"\|"error"` | drives overlay + `StatusPill` (+ `derivePhase`)                                                                           |
+| `state`                                                        | `LiveState \| null`                              | **latest** metrics packet (reps, stage, angle, fps, feedback, rule states, live_score, side, adapting, elapsed, last_rep) |
+| `result`                                                       | `LiveEnd \| null`                                | terminal `{reps, session_id?, export_error?, rendered_video?, rendered_error?}`                                           |
+| `error`                                                        | `string \| null`                                 | server error-event message                                                                                                |
+| `frameSize`                                                    | `{w,h} \| null`                                  | streamed frame's intrinsic size (published once per change) → stage aspect-ratio                                          |
+| `processingSeconds`                                            | `number \| null`                                 | wall-clock start→end, shown in the completion summary                                                                     |
+| refs: `clientRef`, `canvasRef`, `startedAtRef`, `frameSizeRef` | —                                                | imperative handles kept **out** of render state                                                                           |
 
-Only the *latest* packet is kept — there is no per-frame history in the
+Only the _latest_ packet is kept — there is no per-frame history in the
 client (the authoritative history is computed backend-side and delivered as
 the exported report).
 
@@ -689,20 +700,20 @@ cache or local.
 
 ### REST (via `api` client → same-origin `/api/*`, proxied to FastAPI :8000)
 
-| Method & path | Frontend caller | Payload → Response | Notes |
-|---|---|---|---|
-| `GET /api/exercises` | `useExercises` | → `Exercise[]` | catalogue, 5 min staleTime |
-| `GET /api/exercises/{key}` | — | → `Exercise` | **endpoint exists; frontend never calls it** 〔unused〕 |
-| `GET /api/sessions` | `useSessions` | → `SessionListItem[]` | newest-first |
-| `GET /api/sessions/{id}` | `useSession` | → `SessionReport` | `id` = report `session.id`, with filename-stem fallback backend-side |
-| `DELETE /api/sessions/{id}` | `useDeleteSession` | → `204` | permanent file removal; `404` → `ApiError` toast |
-| `GET /api/settings` | `useSettings` | → `AppSettings` (9 keys) | values serialized .env-style |
-| `PUT /api/settings` | `useUpdateSettings` | partial patch → `AppSettings` | backend: pydantic `extra=forbid` (unknown key → **422**, surfaced as toast), `.env` rewritten preserving comments |
-| `POST /api/uploads` | `uploadVideo` (XHR) | multipart → `UploadInfo` | stores under `uploads/videos/`; 415/413/422 on bad input |
-| `GET /api/uploads` | `useUploads` | → `UploadInfo[]` | previous-upload picker |
-| `DELETE /api/uploads/{id}` | `useDeleteUpload` | → `204` | invalidates `["uploads"]`; unused by any page today 〔added for completeness〕 |
-| `GET /api/downloads/rendered/{name}` | live end card (`<a download>`) | → `video/mp4` bytes | rendered session video when `SAVE_OUTPUT` |
-| `GET /api/health` | — | → `{status:"ok"}` | **exists; frontend never calls it** — pages detect reachability via their query's `isError` instead 〔unused〕 |
+| Method & path                        | Frontend caller                | Payload → Response            | Notes                                                                                                             |
+| ------------------------------------ | ------------------------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `GET /api/exercises`                 | `useExercises`                 | → `Exercise[]`                | catalogue, 5 min staleTime                                                                                        |
+| `GET /api/exercises/{key}`           | —                              | → `Exercise`                  | **endpoint exists; frontend never calls it** 〔unused〕                                                           |
+| `GET /api/sessions`                  | `useSessions`                  | → `SessionListItem[]`         | newest-first                                                                                                      |
+| `GET /api/sessions/{id}`             | `useSession`                   | → `SessionReport`             | `id` = report `session.id`, with filename-stem fallback backend-side                                              |
+| `DELETE /api/sessions/{id}`          | `useDeleteSession`             | → `204`                       | permanent file removal; `404` → `ApiError` toast                                                                  |
+| `GET /api/settings`                  | `useSettings`                  | → `AppSettings` (9 keys)      | values serialized .env-style                                                                                      |
+| `PUT /api/settings`                  | `useUpdateSettings`            | partial patch → `AppSettings` | backend: pydantic `extra=forbid` (unknown key → **422**, surfaced as toast), `.env` rewritten preserving comments |
+| `POST /api/uploads`                  | `uploadVideo` (XHR)            | multipart → `UploadInfo`      | stores under `uploads/videos/`; 415/413/422 on bad input                                                          |
+| `GET /api/uploads`                   | `useUploads`                   | → `UploadInfo[]`              | previous-upload picker                                                                                            |
+| `DELETE /api/uploads/{id}`           | `useDeleteUpload`              | → `204`                       | invalidates `["uploads"]`; unused by any page today 〔added for completeness〕                                    |
+| `GET /api/downloads/rendered/{name}` | live end card (`<a download>`) | → `video/mp4` bytes           | rendered session video when `SAVE_OUTPUT`                                                                         |
+| `GET /api/health`                    | —                              | → `{status:"ok"}`             | **exists; frontend never calls it** — pages detect reachability via their query's `isError` instead 〔unused〕    |
 
 Error convention: non-2xx ⇒ `ApiError(status, message, details)`. The message
 comes from **`errorDetailMessage()`** (exported by `client.ts`, shared by the
@@ -718,22 +729,22 @@ never surface in the UI as `[object Object]`; the parsed body is kept on
 `WS /ws/live?exercise=<key>&source=webcam|video[&video=<path>]`
 
 - **Server → client**
-  - *binary frame*: one annotated JPEG per processed frame (~capture rate).
-  - `{"type":"state", …}` metric packet ≈ every 2 processed frames.
-  - `{"type":"end", reps, session_id?, export_error?, rendered_video?,
-    rendered_error?}` terminal; always after export attempt; `rendered_video`
-    is the filename of the annotated session video (only when the backend's
-    `SAVE_OUTPUT` is enabled).
-  - `{"type":"error", message}` terminal (unknown exercise, bad source,
-    unknown upload, camera/video open failure, model failure, or **"Another
-    live session is already running"** — the backend runs a single-slot gate
-    because a webcam is single-user).
+    - _binary frame_: one annotated JPEG per processed frame (~capture rate).
+    - `{"type":"state", …}` metric packet ≈ every 2 processed frames.
+    - `{"type":"end", reps, session_id?, export_error?, rendered_video?,
+rendered_error?}` terminal; always after export attempt; `rendered_video`
+      is the filename of the annotated session video (only when the backend's
+      `SAVE_OUTPUT` is enabled).
+    - `{"type":"error", message}` terminal (unknown exercise, bad source,
+      unknown upload, camera/video open failure, model failure, or **"Another
+      live session is already running"** — the backend runs a single-slot gate
+      because a webcam is single-user).
 - **Client → server:** only `{"action":"stop"}` (graceful finish; the rep
   history so far is exported server-side). Disconnecting likewise stops the
   session (`WebSocketDisconnect` → `session.stop()`).
 - **`video` reference forms:** `upload:<id>` (a file from
   `POST /api/uploads`, resolved strictly inside `uploads/videos/` — the web
-  app *only* uses this form), an explicit server path (developer escape
+  app _only_ uses this form), an explicit server path (developer escape
   hatch), or omitted (`.env` `VIDEO_PATH` fallback).
 
 ### Upload flow (the web video workflow)
@@ -815,7 +826,7 @@ Step-by-step notes (from the code):
    `LiveClient`, resets all state, then connects with `{exercise, source}`.
 2. **Resilient painting.** `paint(blob)` no-ops without a bound canvas;
    `createImageBitmap` decodes off the DOM; the canvas is resized only when
-   frame dimensions change; an undecodable frame is *skipped silently* (try/
+   frame dimensions change; an undecodable frame is _skipped silently_ (try/
    catch) so one bad JPEG never kills the stream.
 3. **Throttle lives server-side.** JSON state is emitted every 2 frames, so
    React re-renders ≈12–15×/s rather than per frame — this is the key decision
@@ -840,13 +851,13 @@ Step-by-step notes (from the code):
    a pinned action cluster with reserved-height slots (upload progress,
    Start button, hint line) — Start never resizes, jumps or shifts while
    picking a video, switching source or uploading.
-6. **Retry fidelity.** The page stores the exact `start()` arguments
+7. **Retry fidelity.** The page stores the exact `start()` arguments
    (`lastArgs`); the error overlay's "Retry session" replays them (for
    uploads: `upload:<id>` — no re-upload of an already stored file).
-7. **Backpressure.** The backend queue is bounded (120); the client has no
+8. **Backpressure.** The backend queue is bounded (120); the client has no
    explicit frame dropping — browser WS buffering + async bitmap decode has
    been sufficient at 960px JPEGs.
-8. **Unmount safety.** `useEffect` cleanup disconnects the socket, which the
+9. **Unmount safety.** `useEffect` cleanup disconnects the socket, which the
    backend treats as a stop (export still happens server-side).
 
 ---
@@ -858,39 +869,39 @@ list inside one `useMemo` (plus `useExercises()` for quick-start) — there is
 no dashboard-specific backend endpoint. The session list is newest-first
 (backend guarantee); the trend reverses it to chronological.
 
-| Widget | Purpose | Data source | Update trigger | Backend event/field |
-|---|---|---|---|---|
-| **Avg Score** `StatCard` | mean of non-null session scores | `score` per list item | query refetch/invalidation | `GET /api/sessions` |
-| **Best / Worst Score** | extremes | same | same | same |
-| **Accuracy** | mean accuracy % | `accuracy` | same | same |
-| **Total Reps / Sessions** | counts | `total_reps` sum, length | same | same |
-| **Progress over time** (LineChart) | score trajectory | items with `recorded_at && score != null`, reversed → `{day: formatDay(), score: round()}[]` | same | per-item `score`,`recorded_at` |
-| **Most common mistakes** (top 5) | which rule fails most across workouts | histogram of `most_common_error` (one per session), sorted desc, sliced 5 | same | per-item `most_common_error` |
-| **Quick start** (≤4 `ExerciseCard compact`) | one-click workout start | `useExercises()` first 4 | exercises query | `GET /api/exercises` |
-| **Recent activity** (5 rows) | jump back into latest reports | first 5 list items | sessions query | per-item `id,exercise,recorded_at,total_reps,good_reps,score` |
+| Widget                                      | Purpose                               | Data source                                                                                  | Update trigger             | Backend event/field                                           |
+| ------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------- |
+| **Avg Score** `StatCard`                    | mean of non-null session scores       | `score` per list item                                                                        | query refetch/invalidation | `GET /api/sessions`                                           |
+| **Best / Worst Score**                      | extremes                              | same                                                                                         | same                       | same                                                          |
+| **Accuracy**                                | mean accuracy %                       | `accuracy`                                                                                   | same                       | same                                                          |
+| **Total Reps / Sessions**                   | counts                                | `total_reps` sum, length                                                                     | same                       | same                                                          |
+| **Progress over time** (LineChart)          | score trajectory                      | items with `recorded_at && score != null`, reversed → `{day: formatDay(), score: round()}[]` | same                       | per-item `score`,`recorded_at`                                |
+| **Most common mistakes** (top 5)            | which rule fails most across workouts | histogram of `most_common_error` (one per session), sorted desc, sliced 5                    | same                       | per-item `most_common_error`                                  |
+| **Quick start** (≤4 `ExerciseCard compact`) | one-click workout start               | `useExercises()` first 4                                                                     | exercises query            | `GET /api/exercises`                                          |
+| **Recent activity** (5 rows)                | jump back into latest reports         | first 5 list items                                                                           | sessions query             | per-item `id,exercise,recorded_at,total_reps,good_reps,score` |
 
 **States:** `isLoading` → skeleton KPI grid + chart; `isError` → "Backend
 unreachable" `EmptyState` + Retry; zero sessions → hero `EmptyState`
 ("No workouts yet" + Start training CTA), with charts/lists suppressed.
 
-〔scaling note〕Aggregates are computed in-browser from the *unbounded*
+〔scaling note〕Aggregates are computed in-browser from the _unbounded_
 session list — fine at hundreds of files; a server-side stats endpoint is the
 documented escape hatch (§17).
 
 ## Live page widgets (for completeness — the "in-workout dashboard")
 
-| Widget | Source field (packet) | Update rate |
-|---|---|---|
-| Reps / Good / Bad tiles | `reps / good / bad` | per state packet (~every 2 frames) |
-| Stage badge + elapsed `mm:ss` | `stage`, `elapsed` | same |
-| Joint angle | `angle` | same |
-| Form `ScoreRing` | `live_score` (may be null → `—`) | same |
-| Permanent Live Feedback panel | `feedback[]` (cross-fades Standing-by / Good-form / warnings / complete) | same |
-| "Form checks" lights | `rules[]` (`name/passed/severity/value`) | same |
-| Header badges | `side`, `fps`, `adapting` (→ "Detecting camera side…" chip) | same |
-| `StatusPill` (icon+color) | client-side `LiveStatus` + readiness | on transitions |
-| `LifecycleBar` stepper | `derivePhase(status, ready)` (pure) | on transitions |
-| Completion panel stats | `useSession(session_id)` report, falling back to live packet + `processingSeconds` | once, at end |
+| Widget                        | Source field (packet)                                                              | Update rate                        |
+| ----------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------- |
+| Reps / Good / Bad tiles       | `reps / good / bad`                                                                | per state packet (~every 2 frames) |
+| Stage badge + elapsed `mm:ss` | `stage`, `elapsed`                                                                 | same                               |
+| Joint angle                   | `angle`                                                                            | same                               |
+| Form `ScoreRing`              | `live_score` (may be null → `—`)                                                   | same                               |
+| Permanent Live Feedback panel | `feedback[]` (cross-fades Standing-by / Good-form / warnings / complete)           | same                               |
+| "Form checks" lights          | `rules[]` (`name/passed/severity/value`)                                           | same                               |
+| Header badges                 | `side`, `fps`, `adapting` (→ "Detecting camera side…" chip)                        | same                               |
+| `StatusPill` (icon+color)     | client-side `LiveStatus` + readiness                                               | on transitions                     |
+| `LifecycleBar` stepper        | `derivePhase(status, ready)` (pure)                                                | on transitions                     |
+| Completion panel stats        | `useSession(session_id)` report, falling back to live packet + `processingSeconds` | once, at end                       |
 
 ---
 
@@ -901,19 +912,21 @@ code-splits out of the landing bundle); every other "chart-like" visual is
 hand-drawn (`ScoreRing` SVG, `Progress` bars, motion bars).
 
 ### Dashboard — "Progress over time" (`LineChart`)
+
 - **Data:** `stats.trend` = `SessionListItem` filtered to
   `recorded_at && score != null`, `.reverse()`ed (list is newest-first →
   becomes oldest→newest), mapped to `{day: formatDay(recorded_at), score:
-  Math.round(score)}`.
+Math.round(score)}`.
 - **Look:** monotone line, primary lime stroke 2.5, small dots, `YAxis
-  domain [0,100]`, muted ticks, token-styled dark tooltip.
+domain [0,100]`, muted ticks, token-styled dark tooltip.
 - **Update:** re-renders only when the `["sessions"]` query data changes
   (mount, post-delete invalidation, post-workout invalidation). No live
   updates.
 
 ### Report — "Score per repetition" (`LineChart`)
+
 - **Data:** `buildProgression(report.history)` → per-rep `{rep, score, good,
-  duration, failed}` (pure, `insights.ts`).
+duration, failed}` (pure, `insights.ts`).
 - **Rationale:** a line communicates progression (fatigue, warm-up,
   breakdown) far better than isolated bars — the old bar chart's successor
   in the identical card, slot, height, axes and token tooltip.
@@ -932,6 +945,7 @@ hand-drawn (`ScoreRing` SVG, `Progress` bars, motion bars).
 - **Update:** static after load (a report is immutable).
 
 ### Non-recharts visuals
+
 - **Mistakes bars** (dashboard `motion.div` width animation): count
   normalized to the max count.
 - **`RangeGauge`** (report coaching + rep rows): expected-range zone with
@@ -948,13 +962,14 @@ hand-drawn (`ScoreRing` SVG, `Progress` bars, motion bars).
 ## 11. Styling
 
 ### Theme system
+
 - **Tokens:** full palette as **HSL CSS variables** (`--background`,
   `--card`, `--primary`, `--secondary`, `--muted`, `--border`, `--input`,
   `--ring`, `--success`, `--warning`, `--destructive`, each with
   `-foreground` pairs) defined twice in `index.css` — under `.dark` and
   `:root:not(.dark)`. Tailwind maps them 1:1 (`tailwind.config.ts`), so
   components use semantic classes (`bg-card`, `text-muted-foreground`) and
-  *never* raw hex.
+  _never_ raw hex.
 - **Dark-first:** `index.html` ships `<html class="dark">` + dark
   `theme-color`; the provider defaults to dark without consulting the OS;
   light theme is a complete second token block, not an afterthought.
@@ -964,14 +979,16 @@ hand-drawn (`ScoreRing` SVG, `Progress` bars, motion bars).
   `350 80%`.
 
 ### Typography
+
 - Sans: `Inter` → system-ui fallbacks; Mono: `ui-monospace` stack (live
   elapsed clock, rule measurements).
 - Scale is Tailwind default; conventions seen everywhere: page titles
   `text-2xl font-bold tracking-tight`, section titles `text-lg font-semibold`,
   micro-labels `text-[11px] font-medium uppercase tracking-wider
-  text-muted-foreground`; all numerics that line up use `tabular-nums`.
+text-muted-foreground`; all numerics that line up use `tabular-nums`.
 
 ### Spacing & shape
+
 - Content container `max-w-6xl`, `px-4 py-6 md:px-8 md:py-8`; sections spaced
   `space-y-6/8`; cards `rounded-xl` (tokens extend `xl:1rem, 2xl:1.25rem`),
   1px borders `border-border/60`, subtle `bg-card/60 backdrop-blur` on chrome.
@@ -980,6 +997,7 @@ hand-drawn (`ScoreRing` SVG, `Progress` bars, motion bars).
   transitions 500–700 ms.
 
 ### Responsive layout
+
 - **Breakpoints used:** `sm` (form rows, grids 2-col), `md` (sidebar vs top
   bar switch `md:flex`/`md:hidden`; `md:pl-64` content offset), `lg` (KPI
   grid → 6 cols, charts row → 3 cols, exercise grid → 3 cols).
@@ -1027,18 +1045,18 @@ image/asset optimization (no assets exist), no React Compiler/memo wrappers.
 
 ## 13. Error handling
 
-| Concern | Mechanism (actual code) |
-|---|---|
-| **API failures** | `ApiError(status, message, details)` thrown by `client.ts` — the message is extracted by `errorDetailMessage()` (string `detail` passthrough; pydantic 422 arrays joined as `loc: msg`), the raw body travels on `.details`. Every data page renders a specific `EmptyState` ("Backend unreachable", hint to `make backend`, **Retry** → `refetch()`). Mutations surface `error.message` via error toast. Report page distinguishes `404` → "Session not found". Global Query `retry: 1`. |
-| **Loading** | Per-page skeleton layouts matching final geometry (KPI grids, lists, cards); Suspense `PageFallback` for lazy pages; buttons show pending states (`Saving…`, delete dialog disabled while `isPending`). |
-| **WebSocket failures** | Server `error` event → status `error` → full-canvas overlay with message + Retry button. Socket closing mid-`connecting`/`live` (crash) → degrade to `ended` rather than hang. Busy-server rejection ("Another live session is already running") arrives as a normal error event with the same UI. |
-| **Reconnect** | 〔unfinished〕**No automatic reconnect/backoff.** Recovery is manual (Retry → fresh `LiveClient`). Acceptable for a local single-user workout, consciously not hidden. |
-| **Stream frame errors** | undecodable JPEG → caught and skipped; stream continues. |
-| **Backend-side live failures** | camera/video-open/model errors are diagnosed backend-side (`services/video_source.py`) and delivered as the WS `error` event message shown in the overlay — the UI displays, never interprets. |
-| **Validation errors on write** | settings PUT with an unknown key → backend `422` (`extra=forbid`), message toasted; `ANALYTICS_FPS ≤ 0` → 422 likewise. |
-| **Upload errors** | `uploadVideo` rejects with an `ApiError` whose message is the shared extractor's output (415 wrong type / 413 too large / 422 `body.file: Field required` / network) and whose `.details` hold the full parsed body — also `console.error`'d for debugging → error toast; the live page stays on the idle overlay so the user can pick another file. The multipart field name `file` **is** the backend contract (`UploadFile = File(...)`); it must be attached via `formData.append` (a plain property assignment silently sends an empty body — the historical `[object Object]`/422 bug). |
-| **Empty data** | dedicated empty states everywhere (no sessions, no matches, perfect form, no mistakes, legacy report without `stats` → explanatory card instead of a broken chart). |
-| **Navigation** | unknown route → `NotFoundPage`; unknown exercise id → server error event overlay. |
+| Concern                        | Mechanism (actual code)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API failures**               | `ApiError(status, message, details)` thrown by `client.ts` — the message is extracted by `errorDetailMessage()` (string `detail` passthrough; pydantic 422 arrays joined as `loc: msg`), the raw body travels on `.details`. Every data page renders a specific `EmptyState` ("Backend unreachable", hint to `make backend`, **Retry** → `refetch()`). Mutations surface `error.message` via error toast. Report page distinguishes `404` → "Session not found". Global Query `retry: 1`.                                                                                                     |
+| **Loading**                    | Per-page skeleton layouts matching final geometry (KPI grids, lists, cards); Suspense `PageFallback` for lazy pages; buttons show pending states (`Saving…`, delete dialog disabled while `isPending`).                                                                                                                                                                                                                                                                                                                                                                                       |
+| **WebSocket failures**         | Server `error` event → status `error` → full-canvas overlay with message + Retry button. Socket closing mid-`connecting`/`live` (crash) → degrade to `ended` rather than hang. Busy-server rejection ("Another live session is already running") arrives as a normal error event with the same UI.                                                                                                                                                                                                                                                                                            |
+| **Reconnect**                  | 〔unfinished〕**No automatic reconnect/backoff.** Recovery is manual (Retry → fresh `LiveClient`). Acceptable for a local single-user workout, consciously not hidden.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Stream frame errors**        | undecodable JPEG → caught and skipped; stream continues.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Backend-side live failures** | camera/video-open/model errors are diagnosed backend-side (`services/video_source.py`) and delivered as the WS `error` event message shown in the overlay — the UI displays, never interprets.                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Validation errors on write** | settings PUT with an unknown key → backend `422` (`extra=forbid`), message toasted; `ANALYTICS_FPS ≤ 0` → 422 likewise.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Upload errors**              | `uploadVideo` rejects with an `ApiError` whose message is the shared extractor's output (415 wrong type / 413 too large / 422 `body.file: Field required` / network) and whose `.details` hold the full parsed body — also `console.error`'d for debugging → error toast; the live page stays on the idle overlay so the user can pick another file. The multipart field name `file` **is** the backend contract (`UploadFile = File(...)`); it must be attached via `formData.append` (a plain property assignment silently sends an empty body — the historical `[object Object]`/422 bug). |
+| **Empty data**                 | dedicated empty states everywhere (no sessions, no matches, perfect form, no mistakes, legacy report without `stats` → explanatory card instead of a broken chart).                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Navigation**                 | unknown route → `NotFoundPage`; unknown exercise id → server error event overlay.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ---
 
@@ -1048,6 +1066,7 @@ All models live in `src/schemas/index.ts` (verbatim mirror of backend
 payloads). Key interfaces, why they exist, and who consumes them:
 
 ### Catalogue
+
 **`Exercise`** — `id, name, description, muscle_groups[], camera("side"|"both"),
 counters[] (names), rules (count), image (string|null)` — one coachable
 movement as exposed by the registry. Used by: Exercises page/grid, dashboard
@@ -1055,23 +1074,24 @@ quick-start, `ExerciseCard`. `image` is the forward thumbnail slot (always
 `null` today; never displayed as anything but a placeholder).
 
 ### Session report document (backend export, read-only)
+
 - **`SessionReport`** — `{session?, exercise, summary, rules, history,
-  stats?}`; `session`/`stats` are **optional** because pre-v4 export files
+stats?}`; `session`/`stats` are **optional** because pre-v4 export files
   lack them (report page renders fallbacks). Consumed by `useSession` →
   ReportPage.
 - **`SessionInfo`** — `{id, recorded_at (tz-aware UTC ISO — the only
-  timestamp), fps, scoring:{base_score, severity_weights}}`.
+timestamp), fps, scoring:{base_score, severity_weights}}`.
 - **`ExerciseInfo` + `CounterRule`** — full counter configuration (joints,
   up/down angles, optional ROM bounds, tempo floor, sync group). Displayed
   indirectly (rules definitions join), never edited.
 - **`RuleDefinition`** — `{name, type, severity, message, expected_min/max,
-  value_unit, joints?, measurement?, reference?}`; powers the "Expected"
+value_unit, joints?, measurement?, reference?}`; powers the "Expected"
   column and severity badges in `RuleEvaluations`.
 - **`Repetition`** — `{number, good, judged_by, score, start_frame, end_frame,
-  duration_seconds, evaluations[]}`; `judged_by` is **required** (v4+), typed
+duration_seconds, evaluations[]}`; `judged_by` is **required** (v4+), typed
   as the union below.
-- **`JudgedBy`** = `"completion" | "rules" | "counter"` — *who certified the
-  rep* (explained to users via tooltips in `JUDGED_BY_INFO`): simple counter
+- **`JudgedBy`** = `"completion" | "rules" | "counter"` — _who certified the
+  rep_ (explained to users via tooltips in `JUDGED_BY_INFO`): simple counter
   certifies completion only / violations forced a bad verdict / managed
   counter judged quality (ROM, tempo, accumulated violations).
 - **`RepEvaluation`** — `{rule, passed, measured_value, message?}` (message
@@ -1084,12 +1104,14 @@ quick-start, `ExerciseCard`. `image` is the forward thumbnail slot (always
   `scores{best,worst,std_dev (pstdev)}`.
 
 ### History list
+
 **`SessionListItem`** — flattened row `{id, file, exercise, recorded_at|null,
 total_reps, good_reps, accuracy, score|null, duration, most_common_error|null}`.
 The `most_common_error` field exists specifically so the dashboard's mistakes
 widget never has to fetch full reports.
 
 ### Settings
+
 **`AppSettings`** (`Record<string, string|number|boolean>` — server returns
 the 9 backend-editable keys) and **`SettingsPatch`** (typed partial of those,
 mirroring the backend contract: `USE_WEBCAM, WEBCAM_INDEX, VIDEO_PATH,
@@ -1100,6 +1122,7 @@ exposed: the web video stage always fits itself responsively, so no display
 width ever needs choosing.
 
 ### Uploads
+
 **`UploadInfo`** — `{id, name, size, uploaded_at?}`: one uploaded workout
 video. `uploaded_at` is present on list responses only (the POST response
 omits it). The `id` is server-generated (`<uuid12>__<safe-name>.<ext>`);
@@ -1107,9 +1130,10 @@ clients treat it as opaque and pass it back as `upload:<id>` to the live
 WebSocket.
 
 ### Live stream
+
 - **`LiveState`** — the ~15 Hz packet (§6.3 field list).
 - **`LiveEnd`** — `{type:"end", reps, session_id?, export_error?,
-  rendered_video?, rendered_error?}` (`export_error`/​`rendered_error` show
+rendered_video?, rendered_error?}` (`export_error`/​`rendered_error` show
   when that step failed while the workout still terminated normally;
   `rendered_video` is present only when backend `SAVE_OUTPUT` produced the
   annotated mp4 — its basename resolves to
@@ -1117,7 +1141,7 @@ WebSocket.
 - **`LiveError`** — `{type:"error", message}`.
 - **`LiveMessage`** union — the `type` discriminant drives the hook's switch.
 - **`LiveRuleState`** — per-rule light `{name, passed, severity, message,
-  value}`.
+value}`.
 
 ---
 
@@ -1184,67 +1208,68 @@ Settings is a side-flow: tweak capture/output/analytics knobs → Save (PUT →
 The reasoning visible in (or documented by) the code, with the rejected
 alternatives:
 
-1. **CSS-variable tokens + Tailwind mapping** *over* hardcoded colors or a
+1. **CSS-variable tokens + Tailwind mapping** _over_ hardcoded colors or a
    UI-kit theme object. → Themes swap at the `:root` level; components stay
    semantic; recharts (which can't use class tokens) reads the same vars via
    inline `hsl(var(--…))` styles, so charts theme identically.
-2. **Hand-rolled shadcn-style primitives** (8 files, ~350 LOC) *over*
+2. **Hand-rolled shadcn-style primitives** (8 files, ~350 LOC) _over_
    installing a component library. → Full control, token purity, tiny
    surface; Radix is kept only where accessibility is hard (dialog focus
    trap, tooltip portals, Slot polymorphism). Trade-off: we own the polish.
-3. **TanStack Query as the only server store** *over* Redux/Zustand. → The
+3. **TanStack Query as the only server store** _over_ Redux/Zustand. → The
    state that must be shared is 95% server data; Query gives cache,
    invalidation, retry, and pending states. A client store would be a second
    source of truth. (Both global client concerns — theme, toasts — fit in 80
    lines of context.)
-4. **Binary video + throttled JSON on one socket** *over* base64/JSON frames
+4. **Binary video + throttled JSON on one socket** _over_ base64/JSON frames
    or two connections / MJPEG / WebRTC. → ~33% smaller than base64, zero
    JSON parse cost for pixels; one connection keeps protocol and lifecycle
    simple; WebRTC is unjustifiable for a same-machine stream.
-5. **Canvas painting outside React** *over* `<img src=blobURL>` per frame.
+5. **Canvas painting outside React** _over_ `<img src=blobURL>` per frame.
    → Object-URL churn/GC pressure kills fluidity at stream rate; refs +
    `drawImage` render at full speed with zero reconciliation.
 6. **`types.ts` mirrors the backend export verbatim** (optionals for legacy)
-   *over* UI-shaped view models. → One coupling seam, zero mapping bugs; the
+   _over_ UI-shaped view models. → One coupling seam, zero mapping bugs; the
    backend contract changed three times during development and only this file
-   + consumers of changed fields ever moved. Cost: pages tolerate `?/`null.
-7. **Lazy-load only the two chart pages** *over* lazy-everything. → Exercises
+    - consumers of changed fields ever moved. Cost: pages tolerate `?/`null.
+7. **Lazy-load only the two chart pages** _over_ lazy-everything. → Exercises
    /Live/History/Settings are the interactions users jump between
    mid-workout; keeping them eager avoids suspense flashes where latency
    matters, while recharts stays out of the landing bundle.
 8. **Per-route feature folders with one sanctioned shared component**
-   (`ExerciseCard`) *over* a global components dump. → Locality of change;
+   (`ExerciseCard`) _over_ a global components dump. → Locality of change;
    the cross-feature import is explicit and one-way (dashboard → exercises).
-9. **Settings exposes 8 operational keys only** *over* a generic config
+9. **Settings exposes 8 operational keys only** _over_ a generic config
    editor. → Product integrity: rules/thresholds/counting are backend code
    (versioned, tested); the backend additionally hard-rejects unknown keys
    (422), and the UI footer says this out loud. (`DISPLAY_MAX_WIDTH` is a 9th
    backend key but CLI-only — the web stage auto-fits, so the form omits it
    on purpose.)
-10. **Dark-first with localStorage, no OS detection** *over*
+10. **Dark-first with localStorage, no OS detection** _over_
     `prefers-color-scheme` init. → Brand is dark-designed; explicit user
     choice persists; OS-flipping under a user who chose light would be worse.
-11. **Single `useMemo` dashboard derivation from the list endpoint** *over* a
+11. **Single `useMemo` dashboard derivation from the list endpoint** _over_ a
     stats endpoint. → Zero backend work shipped the dashboard; magnitude is
     small (files on disk count in the dozens). Documented trade-off (§9) with
     a clear migration path (§17).
-12. **`scoreColor`/formatters centralized** *over* inline thresholds. → Score
+12. **`scoreColor`/formatters centralized** _over_ inline thresholds. → Score
     semantics (≥80/≥50) are identical in rings, tables, badges — one place to
     change the brand's scoring language.
 13. **Lifecycle-modeled live UX** (pure `derivePhase` + stepper + permanent
-    feedback panel + in-place post-workout summary) *over* ad-hoc overlays
+    feedback panel + in-place post-workout summary) _over_ ad-hoc overlays
     and auto-redirects. → The workout's state machine is visible (Set up → Ready
     → Workout → Complete), buttons enable/disable appropriately, warnings
     animate inside reserved space so nothing ever jumps, and finishing shows
     a polished summary with explicit actions — the page behaves like a
     sports dashboard, not a prototype.
 14. **Aspect-ratio follows the video** (`frameSize`/probe → CSS
-    `aspect-ratio` + `object-contain`) *over* any fixed display width. → One
+    `aspect-ratio` + `object-contain`) _over_ any fixed display width. → One
     setting deleted from the UI; any monitor/resolution/portrait clip fits
     with zero stretching, zero cropping.
 
 〔Known quirks, kept honest〕
-- Settings cannot *clear* a text field to empty (empty = "no change").
+
+- Settings cannot _clear_ a text field to empty (empty = "no change").
 - No frontend test runner exists at all (no `vitest`, no `test` script).
   〔unfinished — biggest testing gap on this side of the repo.〕
 - `GET /api/exercises/{id}` and `GET /api/health` are unused by the UI.
@@ -1259,28 +1284,32 @@ alternatives:
 How to add each kind of thing **without breaking the architecture**:
 
 ### A new page
+
 1. Create `src/features/<name>/page.tsx` exporting `XPage` (named export).
 2. Add `<Route>` under the `AppShell` route in `App.tsx`; lazy-load it **iff**
    it pulls a heavy library.
 3. Add a `NAV` entry in `app-shell.tsx` (icon from lucide).
-→ You get skeletons/empty/error patterns by copying the nearest sibling page.
+   → You get skeletons/empty/error patterns by copying the nearest sibling page.
 
 ### A new API endpoint
+
 1. Add/extend the interface in `src/schemas/index.ts` **first**.
 2. Add a hook in the matching `lib/api/<domain>.ts` (`useQuery`/`useMutation`);
    pick a key; on mutation `onSuccess` invalidate/setQueryData.
 3. Consume the hook from the page. Never call `fetch` from a component.
-→ If it's a write, decide its cache story (invalidation prefix vs
-write-through) *before* shipping.
+   → If it's a write, decide its cache story (invalidation prefix vs
+   write-through) _before_ shipping.
 
 ### A new realtime event (`LiveMessage` variant)
+
 1. Extend the union in `types.ts` + emit it in `live_runner.py`.
 2. Handle it in the `onMessage` switch in `use-live-session.ts` (new state or
    side effect).
 3. Render from that state in `live/page.tsx`.
-→ Frames stay binary; events stay JSON; never put pixels in JSON.
+   → Frames stay binary; events stay JSON; never put pixels in JSON.
 
 ### A new dashboard widget
+
 - If it aggregates history: extend the single `stats` `useMemo` in
   `dashboard/page.tsx` (add a field) and render a `Card`/`StatCard`. Data
   arrives free via `["sessions"]`.
@@ -1291,7 +1320,8 @@ write-through) *before* shipping.
   signal to ask for a server-side aggregate endpoint instead.
 
 ### A new chart
-1. Both chart pages are already lazy; if the chart belongs on an *eager* page,
+
+1. Both chart pages are already lazy; if the chart belongs on an _eager_ page,
    lazy-extract that page first or accept the bundle hit consciously.
 2. Style with tokens: strokes/fills via `hsl(var(--…))` inline styles,
    `YAxis domain [0,100]` for score semantics, muted ticks, dark tooltip
@@ -1299,18 +1329,20 @@ write-through) *before* shipping.
 3. Gauge-like single numbers → prefer `ScoreRing`/`Progress` (no lib).
 
 ### A new design primitive
+
 Add `components/ui/<name>.tsx`: cva variants, `cn()`, forwardRef, tokens
 only; Radix only if a11y demands it. Register nothing — import directly.
 
 ### Safe-to-modify map
-| You want to touch | Go ahead | Be careful |
-|---|---|---|
-| `features/*` pages, widgets, filters | ✓ isolated | keep the loading/error/empty triad |
-| `lib/api/hooks`, new endpoints | ✓ | `types.ts` must change first |
-| `components/ui/*`, tokens | ✓ | recharts consumes tokens via inline styles — update both |
-| `live/*` rendering/HUD | ✓ | do **not** move painting into React state |
-| WS protocol, scoring, `judged_by` semantics | — | **backend-owned**; UI mirrors, never reinterprets |
-| Exercise configs/rules/counting | — | backend code, out of UI scope entirely |
+
+| You want to touch                           | Go ahead   | Be careful                                               |
+| ------------------------------------------- | ---------- | -------------------------------------------------------- |
+| `features/*` pages, widgets, filters        | ✓ isolated | keep the loading/error/empty triad                       |
+| `lib/api/hooks`, new endpoints              | ✓          | `types.ts` must change first                             |
+| `components/ui/*`, tokens                   | ✓          | recharts consumes tokens via inline styles — update both |
+| `live/*` rendering/HUD                      | ✓          | do **not** move painting into React state                |
+| WS protocol, scoring, `judged_by` semantics | —          | **backend-owned**; UI mirrors, never reinterprets        |
+| Exercise configs/rules/counting             | —          | backend code, out of UI scope entirely                   |
 
 ---
 
@@ -1470,7 +1502,7 @@ coaching (binary JPEG → canvas outside React; throttled JSON → HUD), a
 **History** list with deletion, an analytics-grade **Report** page (score
 ring, per-rep chart, mistakes, rule statistics, per-rep evaluation tables
 with `judged_by` explanations), and a **Settings** page that edits nine
-operational keys back into `backend/.env` — explicitly *not* exercise rules.
+operational keys back into `backend/.env` — explicitly _not_ exercise rules.
 
 Its performance story is concrete, not aspirational: chart pages code-split,
 pixels never touch React's render cycle, JSON state arrives pre-throttled
@@ -1485,4 +1517,4 @@ Known gaps, stated plainly: no auth/protected routes, no frontend tests, no
 list virtualization, one inert animation class in the dialog overlay, and
 dashboard aggregates computed client-side from an unbounded list (documented
 with its migration path). Everything else works exactly as documented here —
-because this document was written *from* the code, not alongside it.
+because this document was written _from_ the code, not alongside it.

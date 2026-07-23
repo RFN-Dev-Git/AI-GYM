@@ -3,20 +3,22 @@
 ## PROJECT STRUCTURE
 
 ```text
-AI-GYM/
+AI-GYM-Arena/
 ├── assets
 │   ├── models
-│   │   ├── pose_landmarker_full.task
-│   │   └── pose_landmarker_lite.task
-│   └── videos
-│       ├── Chest.mp4
-│       ├── Deadlift .png
-│       ├── Deadlift.mp4
-│       ├── Deadlift2.mp4
-│       ├── Deadlift3.mp4
-│       ├── hackw.mp4
-│       ├── leg.mp4
-│       └── leg2.mp4
+│   │   ├── .gitkeep
+│   │   └── pose_landmarker_full.task
+│   ├── videos
+│   │   ├── .gitkeep
+│   │   ├── Chest.mp4
+│   │   ├── Deadlift .png
+│   │   ├── Deadlift.mp4
+│   │   ├── Deadlift2.mp4
+│   │   ├── Deadlift3.mp4
+│   │   ├── hackw.mp4
+│   │   ├── leg.mp4
+│   │   └── leg2.mp4
+│   └── README.md
 ├── backend
 │   ├── src
 │   │   ├── analytics
@@ -78,6 +80,15 @@ AI-GYM/
 │   │   ├── __init__.py
 │   │   └── main.py
 │   ├── tests
+│   │   ├── analytics
+│   │   │   └── test_session_report.py
+│   │   ├── exercises
+│   │   │   └── test_hack_squat.py
+│   │   ├── integration
+│   │   │   └── test_architecture.py
+│   │   ├── services
+│   │   │   ├── test_distance_handling.py
+│   │   │   └── test_video_source.py
 │   │   ├── test_architecture.py
 │   │   ├── test_distance_handling.py
 │   │   ├── test_hack_squat.py
@@ -85,10 +96,16 @@ AI-GYM/
 │   │   └── test_video_source.py
 │   ├── .env
 │   ├── .env.example
+│   └── requirements.txt
+├── docs
 │   ├── ADDING_AN_EXERCISE.md
 │   ├── ARCHITECTURE.md
-│   └── requirements.txt
+│   └── FRONTEND_ARCHITECTURE.md
 ├── frontend
+│   ├── .vite
+│   │   └── deps
+│   │       ├── _metadata.json
+│   │       └── package.json
 │   ├── src
 │   │   ├── components
 │   │   │   ├── layout
@@ -112,10 +129,21 @@ AI-GYM/
 │   │   │   ├── history
 │   │   │   │   └── page.tsx
 │   │   │   ├── live
+│   │   │   │   ├── completed.tsx
+│   │   │   │   ├── feedback.tsx
+│   │   │   │   ├── lifecycle.ts
 │   │   │   │   ├── page.tsx
+│   │   │   │   ├── status.tsx
 │   │   │   │   └── use-live-session.ts
 │   │   │   ├── report
-│   │   │   │   └── page.tsx
+│   │   │   │   ├── coaching-panel.tsx
+│   │   │   │   ├── highlights.tsx
+│   │   │   │   ├── insights.ts
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── progression.tsx
+│   │   │   │   ├── range-gauge.tsx
+│   │   │   │   ├── rep-list.tsx
+│   │   │   │   └── timeline.tsx
 │   │   │   ├── settings
 │   │   │   │   └── page.tsx
 │   │   │   └── not-found.tsx
@@ -133,12 +161,15 @@ AI-GYM/
 │   │   ├── providers
 │   │   │   ├── theme.tsx
 │   │   │   └── toast.tsx
+│   │   ├── schemas
+│   │   │   └── index.ts
 │   │   ├── App.tsx
 │   │   ├── index.css
 │   │   ├── main.tsx
 │   │   └── vite-env.d.ts
+│   ├── .env
+│   ├── .env.example
 │   ├── .gitignore
-│   ├── FRONTEND_ARCHITECTURE.md
 │   ├── index.html
 │   ├── package-lock.json
 │   ├── package.json
@@ -149,13 +180,46 @@ AI-GYM/
 │   └── vite.config.ts
 ├── output
 │   ├── sessions
+│   │   ├── example_report.json
+│   │   ├── Hack_Squat_20260722_025153.json
+│   │   ├── Hack_Squat_20260722_031002.json
+│   │   ├── Hack_Squat_20260722_040007.json
+│   │   ├── Hack_Squat_20260722_041552.json
+│   │   ├── Hack_Squat_20260722_042714.json
+│   │   ├── Hack_Squat_20260722_043019.json
+│   │   ├── Hack_Squat_20260722_043231.json
+│   │   ├── Hack_Squat_20260722_043308.json
+│   │   ├── Hack_Squat_20260722_044332.json
+│   │   ├── Hack_Squat_20260722_045532.json
+│   │   ├── Hack_Squat_20260722_113530.json
+│   │   ├── Hack_Squat_20260722_115410.json
+│   │   └── Shoulder_Press_20260721_151712.json
 │   └── videos
-│       └── Hack_Squat_20260722_010752.mp4
+│       ├── .gitkeep
+│       ├── Hack_Squat_20260722_010752.mp4
+│       ├── Hack_Squat_20260722_015736.mp4
+│       ├── Hack_Squat_20260722_020031.mp4
+│       ├── Hack_Squat_20260722_020119.mp4
+│       ├── Hack_Squat_20260722_020415.mp4
+│       ├── Hack_Squat_20260722_025153.mp4
+│       ├── Hack_Squat_20260722_031002.mp4
+│       ├── Hack_Squat_20260722_040007.mp4
+│       ├── Hack_Squat_20260722_041552.mp4
+│       ├── Hack_Squat_20260722_042714.mp4
+│       ├── Hack_Squat_20260722_043019.mp4
+│       ├── Hack_Squat_20260722_043231.mp4
+│       ├── Hack_Squat_20260722_043308.mp4
+│       ├── Hack_Squat_20260722_044332.mp4
+│       ├── Hack_Squat_20260722_045532.mp4
+│       ├── Hack_Squat_20260722_113530.mp4
+│       └── Hack_Squat_20260722_115410.mp4
+├── uploads
+│   └── videos
+│       └── .gitkeep
 ├── .gitignore
 ├── codex
 ├── Makefile
-├── README.md
-└── term
+└── README.md
 ```
 
 ## SOURCE FILES
@@ -1439,10 +1503,12 @@ Path bases
 ``REPO_ROOT`` (the repository root, ``PROJECT_ROOT``'s parent)
     every *data* path. Inputs live in ``assets/`` (pose model, dev videos),
     generated artifacts in ``output/`` (``sessions/`` = exported reports,
-    ``videos/`` = rendered sessions, ``uploads/`` = web-app uploads).
+    ``videos/`` = rendered sessions), user-uploaded videos in
+    ``uploads/videos/``.
 
-**Rule:** every relative path in ``.env`` resolves against ``REPO_ROOT``;
-absolute paths pass through untouched.
+**Rule:** every relative path in ``backend/.env`` resolves against
+``REPO_ROOT``; absolute paths pass through untouched. The ``.env`` file
+itself is located by absolute path (``<backend>/.env``) — never by CWD.
 """
 
 from functools import lru_cache
@@ -1463,11 +1529,14 @@ ASSETS_DIR = REPO_ROOT / "assets"
 MODELS_DIR = ASSETS_DIR / "models"
 VIDEOS_DIR = ASSETS_DIR / "videos"
 
-# Generated artifacts (repo root): reports, rendered videos, web uploads.
+# Generated artifacts (repo root): reports, rendered videos.
 OUTPUT_DIR = REPO_ROOT / "output"
 SESSIONS_DIR = OUTPUT_DIR / "sessions"
 RENDERED_DIR = OUTPUT_DIR / "videos"
-UPLOADS_DIR = OUTPUT_DIR / "uploads"
+
+# User uploads (repo root, deliberately separate from assets AND output):
+# videos the web app receives from its users.
+UPLOADS_DIR = REPO_ROOT / "uploads" / "videos"
 
 
 def resolve_path(path, base: Path = REPO_ROOT) -> Path:
@@ -1504,7 +1573,7 @@ class AppSettings(BaseSettings):
     EXPORT_DIR: Path = SESSIONS_DIR
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=PROJECT_ROOT / ".env",   # absolute: independent of the CWD
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -3134,7 +3203,7 @@ Client connects to
 ``video`` reference forms (only with ``source=video``):
 
 * ``upload:<id>`` — a video previously uploaded via ``POST /api/uploads``
-  (the **web app flow**; ids resolve strictly inside ``output/uploads/``);
+  (the **web app flow**; ids resolve strictly inside ``uploads/videos/``);
 * an explicit path — developer escape hatch / CLI parity (local, single-user);
 * omitted — falls back to ``VIDEO_PATH`` from ``.env``.
 
@@ -3183,7 +3252,7 @@ async def live_session(websocket: WebSocket, exercise: str, source: str = "webca
         await websocket.send_json({"type": "error", "message": "source must be 'webcam' or 'video'"})
         return await websocket.close()
 
-    # Resolve upload references to real paths inside output/uploads/.
+    # Resolve upload references to real paths inside uploads/videos/.
     if video is not None and video.startswith("upload:"):
         upload_id = video[len("upload:"):]
         resolved = stored_path(upload_id)
@@ -3418,7 +3487,7 @@ def update_settings(patch: SettingsPatch) -> Dict[str, Any]:
 ```py
 """Video uploads — the web app's way to pick a workout video.
 
-Browser uploads land in the repo-root ``output/uploads/`` directory under a
+Browser uploads land in the repo-root ``uploads/videos/`` directory under a
 name the server controls::
 
     <uuid12>__<sanitized-original-name>.<ext>
@@ -5839,6 +5908,1453 @@ if __name__ == "__main__":
 
 ---
 
+### FILE: [backend/tests/analytics/test_session_report.py](backend/tests/analytics/test_session_report.py)
+
+```py
+"""Verify the complete Session Report pipeline.
+
+Covers:
+  1. RepJudge record()/observe() — complete evaluations collected, existing
+     violation/start_frame semantics byte-identical.
+  2. SessionAnalyzer.analyze() — summary behaviour preserved.
+  3. SessionAnalyzer.build_report() — exercise info; session-level rule
+     definitions stored ONCE (static metadata + counter-originated rules
+     discovered from produced data); per-rep records referencing rules by
+     name with ONLY dynamic data (pass/fail, measured value, and a message
+     solely when it is a runtime override); explicit judged_by semantics.
+  4. JsonSessionExporter — round-trips; normalized layout (each fact once:
+     no schema_version, no duplicate timestamp/exercise name); no static
+     metadata repeated in history.
+  5. End-to-end — engine history -> report -> JSON, with dynamic ROM
+     messages preserved as overrides.
+  6. Audit scenario — scores/error stats derived from the complete record.
+  7. "session" + "stats" sections — id, recorded_at (the ONLY timestamp),
+     fps, scoring policy; per-rule success rates + score extremes.
+  8. Consistency invariants — summary always reconciles with history;
+     judged_by explains every (good, evaluations) combination;
+     session score == aggregation of exported per-rep scores.
+
+Run from backend/:  python tests/analytics/test_session_report.py
+"""
+
+import json
+import sys
+import tempfile
+import types
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/
+
+import os
+os.environ.setdefault("MODEL_PATH", "assets/models/pose_landmarker_lite.task")
+
+# ── Stub mediapipe (only PoseService needs it; these tests never call it) ──
+_mp = types.ModuleType("mediapipe")
+_mp_tasks = types.ModuleType("mediapipe.tasks")
+_mp_python = types.ModuleType("mediapipe.tasks.python")
+_mp_python.vision = types.ModuleType("mediapipe.tasks.python.vision")
+_mp.tasks = _mp_tasks
+_mp_tasks.python = _mp_python
+sys.modules.update({
+    "mediapipe": _mp, "mediapipe.tasks": _mp_tasks,
+    "mediapipe.tasks.python": _mp_python,
+    "mediapipe.tasks.python.vision": _mp_python.vision,
+})
+
+from src.analytics.analyzer import SessionAnalyzer
+from src.analytics.exporters import JsonSessionExporter
+from src.analytics.session_report import SessionReport
+from src.exercises.registry import registry
+from src.exercises.rules import Severity
+from src.exercises.validation import ValidationResult
+from src.services.rep_judge import RepJudge, RepResult
+
+
+def outcome(rule, passed, severity=Severity.ERROR, value=90.0, message="msg"):
+    return ValidationResult(rule, message, severity, passed, value)
+
+
+# Static messages as configured in shoulder_press.py (for override checks)
+DIST_MSG = "Keep wrists wider than shoulders"
+ELBOW_MSG = "Elbow: Reach 170° up, 60° down"
+
+
+def main():
+    # ── 1. RepJudge: record() is additive; observe() keeps legacy semantics ─
+    j = RepJudge()
+    j.record([outcome("back", True, value=170.0), outcome("elbow", True, value=160.0)], frame=0)
+    j.record([outcome("back", True, value=165.0)], frame=1)          # latest pass wins
+    assert j._start_frame == 0 and not j._violations   # record() tracks the window from frame 0
+
+    j.observe([outcome("back", False, Severity.WARNING, 140.0)], frame=10)
+    j.observe([outcome("back", False, Severity.ERROR, 130.0, "worse")], frame=11)
+    j.record([outcome("elbow", True, value=155.0)])
+
+    rep = j.finalize_rep(1, frame=12)
+    assert rep.start_frame == 0 and rep.end_frame == 12   # window started at first recorded frame
+    assert [v.rule_name for v in rep.violations] == ["back"]
+    assert rep.violations[0].severity == Severity.ERROR and rep.violations[0].message == "worse"
+    assert not rep.good
+    by_rule = {e.rule_name: e for e in rep.evaluations}
+    assert set(by_rule) == {"back", "elbow"}
+    assert by_rule["back"].passed is False and by_rule["back"].severity == Severity.ERROR
+    assert by_rule["elbow"].passed is True and by_rule["elbow"].angle == 155.0
+
+    j2 = RepJudge()
+    j2.record([outcome("x", False)], frame=0)
+    j2.record([outcome("x", True)], frame=1)                # pass never overwrites a fail
+    rep2 = j2.finalize_rep(1, frame=1, force_good=False)
+    assert rep2.evaluations[0].passed is False
+
+    # observe() with no prior record() still starts the window at the observed frame
+    j3 = RepJudge()
+    j3.observe([outcome("y", False)], frame=42)
+    assert j3.finalize_rep(1, frame=43).start_frame == 42
+
+    # ── 2. analyze(): legacy summary behaviour preserved ────────────────────
+    reps = [
+        RepResult(1, True, violations=[], start_frame=0, end_frame=49),
+        RepResult(2, False, violations=[outcome("depth", False)], start_frame=50, end_frame=129,
+                  evaluations=[outcome("depth", False)]),
+        RepResult(3, True, violations=[], start_frame=130, end_frame=199),
+    ]
+    summary = SessionAnalyzer().analyze(reps, exercise_name="Squat", fps=25.0)
+    assert summary.total_reps == 3 and summary.good_reps == 2 and summary.bad_reps == 1
+    assert abs(summary.accuracy - 66.6667) < 0.01
+    assert abs(summary.average_rep_time - (2.0 + 3.2 + 2.8) / 3) < 1e-9
+    assert summary.fastest_rep == 2.0 and summary.slowest_rep == 3.2
+    assert summary.common_errors == {"depth": 1} and summary.most_common_error == "depth"
+    # score: 100, 50 (one error), 100 -> session 83.33
+    assert abs(summary.score - (100 + 50 + 100) / 3) < 0.01
+
+    # ── 3. build_report(): structure, definitions-once, slim evaluations ────
+    exercise = registry.get("shoulder_press")
+    reps_b = [
+        RepResult(
+            1, True, violations=[], start_frame=0, end_frame=49,
+            evaluations=[
+                outcome("left_shoulder_wrist_distance", True, value=2.10, message=DIST_MSG),
+                outcome("left_elbow_rom", True, value=171.0, message=ELBOW_MSG),
+            ],
+        ),
+        RepResult(
+            2, False,
+            violations=[
+                outcome("left_shoulder_wrist_distance", False, value=1.02, message=DIST_MSG),
+                outcome("left_elbow_rom", False, value=66.0,
+                        message="Go deeper — target <= 60 deg"),     # dynamic ROM cue
+                outcome("left_shoulder_too_fast", False, Severity.WARNING, None,
+                        "Too fast — control the movement"),
+            ],
+            start_frame=50, end_frame=124,
+            evaluations=[
+                outcome("left_shoulder_wrist_distance", False, value=1.02, message=DIST_MSG),
+                outcome("left_elbow_rom", False, value=66.0,
+                        message="Go deeper — target <= 60 deg"),     # dynamic override
+                outcome("left_shoulder_rom", True, value=165.0,
+                        message="Shoulder: Reach 160° up, 40-80° down"),
+                outcome("left_shoulder_too_fast", False, Severity.WARNING, None,
+                        "Too fast — control the movement"),
+            ],
+        ),
+    ]
+    report = SessionAnalyzer().build_report(
+        reps_b, exercise=exercise, fps=25.0, date="2026-07-21T10:00:00",
+    )
+    assert isinstance(report, SessionReport)
+
+    # exercise info
+    assert report.exercise.name == "Shoulder Press"
+    assert report.exercise.muscle_groups == ("shoulders", "triceps", "upper chest")
+    assert report.exercise.camera == "both"
+    assert [c.name for c in report.exercise.counter_rules] == ["left_shoulder", "right_shoulder"]
+    assert report.exercise.counter_rules[0].sync_group == "shoulder_press"
+
+    # summary embedded == analyze() summary
+    legacy_summary = SessionAnalyzer().analyze(
+        reps_b, exercise_name=exercise.name, fps=25.0, date="2026-07-21T10:00:00",
+    )
+    assert report.summary == legacy_summary
+
+    # ── rules section: every definition stored EXACTLY ONCE ─────────────────
+    defs = {r.name: r for r in report.rules}
+    assert len(defs) == len(report.rules)                       # no duplicates
+    # all validation rules from the exercise are defined...
+    for vr in exercise.validation_rules:
+        assert vr.name in defs
+    # ...plus the counter-originated rule discovered in the produced data
+    d_dist = defs["left_shoulder_wrist_distance"]
+    assert d_dist.type == "distance" and d_dist.value_unit == "ratio"
+    assert (d_dist.expected_min, d_dist.expected_max) == (1.2, 3.0)
+    assert d_dist.measurement == (15, 16) and d_dist.reference == (11, 12)
+    assert d_dist.joints is None and d_dist.severity == Severity.ERROR
+    d_rom = defs["left_elbow_rom"]
+    assert d_rom.type == "range_of_motion" and d_rom.value_unit == "degrees"
+    assert (d_rom.expected_min, d_rom.expected_max) == (60, 170)
+    assert d_rom.joints == (11, 13, 15)
+    d_fast = defs["left_shoulder_too_fast"]
+    assert d_fast.type == "counter" and d_fast.severity == Severity.WARNING
+    assert d_fast.message == "Too fast — control the movement"
+    assert d_fast.expected_min is None and d_fast.joints is None
+
+    # ── history: references + dynamic data only ─────────────────────────────
+    assert len(report.history) == 2
+    r1, r2 = report.history
+    assert r1.good and r1.score == 100.0 and r1.failed_rules == ()
+    assert r1.duration_seconds == 2.0
+    e1 = {e.rule: e for e in r1.evaluations}
+    assert e1["left_shoulder_wrist_distance"] == type(e1["left_shoulder_wrist_distance"])(
+        rule="left_shoulder_wrist_distance", passed=True, measured_value=2.10, message=None,
+    )
+
+    assert r2.good is False and r2.duration_seconds == 3.0
+    assert set(r2.failed_rules) == {
+        "left_shoulder_wrist_distance", "left_elbow_rom", "left_shoulder_too_fast",
+    }
+    e2 = {e.rule: e for e in r2.evaluations}
+    # static message identical to the definition -> omitted (no duplication)
+    assert e2["left_shoulder_wrist_distance"].message is None
+    assert e2["left_shoulder_rom"].message is None
+    assert e2["left_shoulder_too_fast"].message is None
+    # dynamic runtime cue -> kept as override
+    assert e2["left_elbow_rom"].message == "Go deeper — target <= 60 deg"
+    # nothing static leaks into the slim record
+    assert not hasattr(e2["left_elbow_rom"], "severity")
+    assert not hasattr(e2["left_elbow_rom"], "expected_min")
+    assert not hasattr(e2["left_elbow_rom"], "type")
+    # per-rep score from the complete evaluation record: 100 - 50 - 50 - 20 -> 0
+    assert r2.score == 0.0
+
+    # summary error statistics match the exported history
+    assert report.summary.common_errors == {
+        "left_elbow_rom": 1, "left_shoulder_too_fast": 1, "left_shoulder_wrist_distance": 1,
+    }
+    assert report.summary.most_common_error == "left_shoulder_wrist_distance"
+    assert abs(report.summary.score - (100.0 + 0.0) / 2) < 0.01
+
+    # ── 4. Exporter: JSON round-trip + legacy summary layout ────────────────
+    with tempfile.TemporaryDirectory() as tmp:
+        out = JsonSessionExporter().export(report, Path(tmp) / "session")
+        assert out.suffix == ".json" and out.exists()
+        data = json.loads(out.read_text(encoding="utf-8"))
+
+    # FIX 1: no schema_version; the layout is deliberately unversioned
+    assert "schema_version" not in data
+    assert set(data) == {"session", "exercise", "summary", "rules", "history", "stats"}
+
+    # FIX 2 + 3: identity/timestamp live exactly once — in exercise/session,
+    # NOT duplicated inside summary (summary carries pure aggregates only)
+    assert "exercise" not in data["summary"] and "date" not in data["summary"]
+    assert data["exercise"]["name"] == "Shoulder Press"
+
+    legacy_json = {
+        "total_reps": summary.total_reps,
+        "good_reps": summary.good_reps,
+        "bad_reps": summary.bad_reps,
+        "accuracy": round(summary.accuracy, 1),
+        "average_rep_duration": round(summary.average_rep_time, 2),
+        "fastest_rep": round(summary.fastest_rep, 2),
+        "slowest_rep": round(summary.slowest_rep, 2),
+        "total_workout_duration": round(summary.total_workout_duration, 2),
+        "common_errors": dict(summary.common_errors),
+        "most_common_error": summary.most_common_error,
+        "score": round(summary.score, 1) if summary.score is not None else None,
+    }
+    legacy_report = JsonSessionExporter()._serialize(
+        SessionAnalyzer().build_report(
+            reps, exercise=registry.get("squat"), fps=25.0, date=summary.date,
+        )
+    )
+    assert legacy_report["summary"] == legacy_json
+    assert set(data["summary"]) == set(legacy_json)
+
+    # enums serialized to plain values
+    assert data["exercise"]["camera"] == "both"
+    json_defs = {d["name"]: d for d in data["rules"]}
+    assert json_defs["left_shoulder_wrist_distance"]["severity"] == "error"
+    assert json_defs["left_shoulder_wrist_distance"]["measurement"] == [15, 16]
+    assert json_defs["left_shoulder_too_fast"]["severity"] == "warning"
+
+    # history holds no repeated static metadata
+    for ev in data["history"][1]["evaluations"]:
+        assert set(ev) <= {"rule", "passed", "measured_value", "message"}
+    ev2 = {e["rule"]: e for e in data["history"][1]["evaluations"]}
+    assert ev2["left_shoulder_wrist_distance"] == {
+        "rule": "left_shoulder_wrist_distance", "passed": False, "measured_value": 1.02,
+    }
+    assert ev2["left_elbow_rom"]["message"] == "Go deeper — target <= 60 deg"
+
+    # every evaluation references a defined rule (self-describing join works)
+    defined = set(json_defs)
+    for rep_d in data["history"]:
+        for ev in rep_d["evaluations"]:
+            assert ev["rule"] in defined
+    # every defined rule is used at least once (no dead definitions)
+    used = {ev["rule"] for rep_d in data["history"] for ev in rep_d["evaluations"]}
+    assert set(json_defs) == used | set(json_defs)  # superset by construction
+    assert used <= defined
+
+    # ── 5. End-to-end: engine history -> report -> JSON ─────────────────────
+    from tests.services.test_distance_handling import pose, UP_WIDE, UP_NARROW, DOWN, W, H
+    from src.services.gym_engine import GymEngine
+
+    engine = GymEngine(registry.get("shoulder_press"))
+    seq = ([UP_WIDE] * 3 + [DOWN] * 3 + [UP_NARROW] * 3 + [DOWN] * 3 + [UP_WIDE] * 3 + [DOWN] * 3)
+    for i, b in enumerate(seq):
+        engine.analyze(pose(b), W, H, i)
+
+    live = SessionAnalyzer().build_report(
+        engine.judge.history, exercise=engine.exercise, fps=25.0, total_duration=1.0,
+    )
+    assert len(live.history) == 3 and not live.history[1].good
+    # frame windows now span whole reps (no nulls, no single-frame durations)
+    windows = [(r.start_frame, r.end_frame, r.duration_seconds) for r in live.history]
+    assert windows == [(0, 3, 0.16), (4, 9, 0.24), (10, 15, 0.24)]
+    assert live.summary.fastest_rep == 0.16 and live.summary.slowest_rep == 0.24
+    assert abs(live.summary.average_rep_time - (0.16 + 0.24 + 0.24) / 3) < 1e-9
+    assert live.summary.common_errors == {"left_shoulder_wrist_distance": 1}
+    assert live.summary.most_common_error == "left_shoulder_wrist_distance"
+    live_defs = {r.name for r in live.rules}
+    rep2_rules = {e.rule: e for e in live.history[1].evaluations}
+    assert "left_shoulder_wrist_distance" in live_defs
+    assert rep2_rules["left_shoulder_wrist_distance"].passed is False
+    assert "left_elbow_rom" in rep2_rules and "left_shoulder_rom" in rep2_rules
+    # ROM rules passed with static messages -> no override stored
+    assert rep2_rules["left_elbow_rom"].message is None
+    assert len(live.history[0].evaluations) >= 5
+    assert all(e.rule in live_defs for e in live.history[1].evaluations)
+    json.dumps(JsonSessionExporter()._serialize(live), ensure_ascii=False)
+
+    # ── 6. Audit scenario: GOOD-by-counter reps with failing ERROR rules ────
+    import math as _m
+
+    class _LM:
+        __slots__ = ("x", "y", "z", "visibility")
+        def __init__(s2, x, y): s2.x, s2.y, s2.z, s2.visibility = x, y, 0.0, 1.0
+
+    def squat_pose(knee_deg, torso_deg):
+        a = _m.radians(180 - knee_deg); kp = (0.50, 0.75); hip = (0.50, 0.55)
+        ank = (kp[0] + 0.25 * _m.sin(a), kp[1] + 0.25 * _m.cos(a))
+        t = _m.radians(180 - torso_deg); sh = (hip[0] + 0.20 * _m.sin(t), hip[1] - 0.20 * _m.cos(t))
+        lms = [_LM(0.5, 0.1) for _ in range(33)]
+        lms[24] = _LM(*hip); lms[26] = _LM(*kp); lms[28] = _LM(*ank)
+        lms[12] = _LM(*sh); lms[11] = _LM(sh[0] - 0.02, sh[1])
+        lms[23] = _LM(hip[0] - 0.02, hip[1]); lms[25] = _LM(*kp); lms[27] = _LM(ank[0] - 0.02, ank[1])
+        return lms
+
+    sq = GymEngine(registry.get("squat"))
+    sq_seq = [170] * 40 + [60] * 6 + [170] * 6 + [60] * 6 + [170] * 6 + [60] * 6 + [170] * 6
+    for i, k in enumerate(sq_seq):
+        torso = 40 if i < 52 else 175          # bad form for 2 reps, then textbook form
+        sq.analyze(squat_pose(k, torso), 1000, 1000, i)
+
+    sq_report = SessionAnalyzer().build_report(
+        sq.judge.history, exercise=sq.exercise, fps=25.0, total_duration=3.0,
+    )
+    assert len(sq_report.history) == 3
+    # INTENDED: the simple-path counter still classifies all reps GOOD (unchanged runtime)
+    assert all(r.good for r in sq_report.history)
+    # FIXED: the record no longer claims perfection — scores reflect the evidence
+    assert [r.score for r in sq_report.history] == [50.0, 50.0, 100.0]
+    assert sq_report.history[0].failed_rules == ("back_straight",)
+    assert sq_report.history[2].failed_rules == ()
+    # FIXED: summary error statistics agree with history
+    assert sq_report.summary.common_errors == {"back_straight": 2}
+    assert sq_report.summary.most_common_error == "back_straight"
+    assert abs(sq_report.summary.score - (50 + 50 + 100) / 3) < 0.01
+    # FIXED: every rep has a real frame window and duration (no null exports)
+    # (first ~30 frames are consumed by side-camera adaptation -> 12-frame windows)
+    for r in sq_report.history:
+        assert r.start_frame is not None and r.end_frame is not None
+        assert r.duration_seconds is not None and r.duration_seconds > 0.4
+    assert abs(sq_report.summary.average_rep_time - 0.48) < 0.01
+    # INVARIANT: score < 100 iff the rep has failed evaluations
+    for r in sq_report.history:
+        assert (r.score < 100.0) == bool(r.failed_rules)
+    # INTENDED & DOCUMENTED: good may be True alongside failed rules (see RepetitionRecord docs)
+    json.dumps(JsonSessionExporter()._serialize(sq_report), ensure_ascii=False)
+
+    # ── 7. "session" + "stats" sections ──────────────────────────────────────
+    from datetime import datetime as _dt
+    from statistics import pstdev as _pstdev
+
+    # --- session block (in-memory report from section 3) -------------------
+    ses = report.session
+    assert ses is not None and len(ses.id) == 32 and int(ses.id, 16) >= 0   # uuid4 hex
+    assert _dt.fromisoformat(ses.recorded_at).tzinfo is not None            # tz-aware
+    assert ses.fps == 25.0 and ses.base_score == 100.0
+    assert dict(ses.severity_weights) == {
+        Severity.ERROR: 50.0, Severity.WARNING: 20.0, Severity.INFO: 10.0,
+    }
+
+    # --- stats.rules: hand-checked against the known section-3 data --------
+    rows = {row.rule: row for row in report.stats.rules}
+    # one row per defined rule, including never-evaluated ones
+    assert {row.rule for row in report.stats.rules} == {d.name for d in report.rules}
+    d = rows["left_shoulder_wrist_distance"]
+    assert (d.evaluations, d.passed, d.failed) == (2, 1, 1)
+    assert d.success_rate == 50.0
+    assert abs(d.avg_measured_value - (2.10 + 1.02) / 2) < 1e-9
+    assert d.min_measured_value == 1.02 and d.max_measured_value == 2.10
+    e = rows["left_elbow_rom"]
+    assert (e.evaluations, e.passed, e.failed, e.success_rate) == (2, 1, 1, 50.0)
+    f = rows["left_shoulder_too_fast"]
+    assert (f.evaluations, f.failed, f.success_rate) == (1, 1, 0.0)
+    assert f.avg_measured_value is None and f.min_measured_value is None  # no measured value
+    z = rows["right_elbow_rom"]          # configured but never evaluated
+    assert (z.evaluations, z.passed, z.failed) == (0, 0, 0)
+    assert z.success_rate is None and z.avg_measured_value is None
+    # ordering: failure volume desc, then name (top-mistakes widgets read top-N)
+    ordering = [(row.rule, row.failed) for row in report.stats.rules]
+    assert ordering == [
+        ("left_elbow_rom", 1), ("left_shoulder_too_fast", 1),
+        ("left_shoulder_wrist_distance", 1),
+        ("left_shoulder_rom", 0), ("right_elbow_rom", 0), ("right_shoulder_rom", 0),
+    ]
+
+    # --- stats.scores -------------------------------------------------------
+    assert report.stats.scores.best == 100.0 and report.stats.scores.worst == 0.0
+    assert abs(report.stats.scores.std_dev - _pstdev([100.0, 0.0])) < 1e-9
+
+    # --- reconciliation: stats can never disagree with summary/history -----
+    assert sum(row.failed for row in report.stats.rules) == sum(
+        report.summary.common_errors.values()
+    )
+    assert {
+        row.rule: row.failed for row in report.stats.rules if row.failed
+    } == report.summary.common_errors
+
+    # --- serialized form ----------------------------------------------------
+    s_ses = data["session"]
+    assert set(s_ses) == {"id", "recorded_at", "fps", "scoring"}
+    assert s_ses["fps"] == 25.0
+    assert s_ses["scoring"]["base_score"] == 100.0
+    assert s_ses["scoring"]["severity_weights"] == {
+        "error": 50.0, "warning": 20.0, "info": 10.0,
+    }
+    s_rows = {row["rule"]: row for row in data["stats"]["rules"]}
+    assert s_rows["left_shoulder_wrist_distance"]["success_rate"] == 50.0
+    assert s_rows["left_shoulder_wrist_distance"]["avg_measured_value"] == 1.56
+    assert s_rows["right_elbow_rom"]["success_rate"] is None    # honest null, not fake 0/100
+    assert data["stats"]["scores"] == {"best": 100.0, "worst": 0.0, "std_dev": 50.0}
+
+    # --- audit scenario (squat): stats reconcile with history --------------
+    sq_rows = {row.rule: row for row in sq_report.stats.rules}
+    assert sq_rows["back_straight"].failed == 2                    # == common_errors
+    assert sq_report.stats.rules[0].rule == "back_straight"        # top mistake first
+    assert abs(sq_report.stats.scores.std_dev - _pstdev([50.0, 50.0, 100.0])) < 1e-9
+    for r_name, row in sq_rows.items():
+        agg = [ev for rep in sq_report.history for ev in rep.evaluations if ev.rule == r_name]
+        assert row.evaluations == len(agg)
+        assert row.passed == sum(1 for ev in agg if ev.passed)
+
+    # ── 8. Consistency invariants: judged_by + summary↔history reconciliation ─
+    from collections import Counter as _Counter
+    from src.analytics.session_report import (
+        JUDGED_BY_COMPLETION as _C, JUDGED_BY_COUNTER as _Q, JUDGED_BY_RULES as _R,
+    )
+
+    # FIX 4: the runtime semantics are explicit per rep, for each counter path
+    assert report.history[0].judged_by == _C          # simple counter, GOOD by completion
+    assert report.history[1].judged_by == _R          # distance violation forced BAD on the simple path
+    hack = SessionAnalyzer().build_report(
+        reps, exercise=registry.get("hack_squat"), fps=25.0,
+    )
+    assert {r.judged_by for r in hack.history} == {_Q}  # managed counter judges quality itself
+    assert all(r.judged_by == _C for r in sq_report.history)   # squat = simple path by design
+
+    # no rep may ever look contradictory: the only (good, evaluations) combos
+    # that raw data couldn't explain are now labelled with their mechanism
+    for rep_ in (*report.history, *sq_report.history, *live.history, *hack.history):
+        assert rep_.judged_by in (_C, _R, _Q)
+        if rep_.good and rep_.failed_rules:
+            # GOOD with evidence of failure: only meaningful if the counter
+            # never claimed to judge quality...
+            assert rep_.judged_by in (_C, _Q)
+            # ...and the failures are always priced into the score
+            assert rep_.score < 100.0
+        if not rep_.good:
+            assert rep_.judged_by in (_R, _Q)         # never "completion"
+        if rep_.score < 100.0:
+            assert rep_.failed_rules                  # score always has evidence
+
+    # FIX 5 + 6: exported summary is ALWAYS re-derivable from exported history
+    def reconcile(d):
+        hist = d["history"]
+        ok = [r for r in hist if r["good"]]
+        summ = d["summary"]
+        assert summ["total_reps"] == len(hist)
+        assert summ["good_reps"] == len(ok) and summ["bad_reps"] == len(hist) - len(ok)
+        assert summ["accuracy"] == round(len(ok) / len(hist) * 100, 1) if hist else True
+        scores = [r["score"] for r in hist]
+        assert summ["score"] == round(sum(scores) / len(scores), 1)
+        errs = _Counter(e["rule"] for r in hist for e in r["evaluations"] if not e["passed"])
+        assert summ["common_errors"] == dict(
+            sorted(errs.items(), key=lambda kv: (-kv[1], kv[0]))
+        )
+        assert summ["most_common_error"] == (errs.most_common(1)[0][0] if errs else None)
+        durations = [
+            round((r["end_frame"] - r["start_frame"] + 1) / d["session"]["fps"], 2)
+            for r in hist
+        ]
+        assert summ["average_rep_duration"] == round(sum(durations) / len(durations), 2)
+        assert [round(r["duration_seconds"], 2) for r in hist] == durations
+        # rep keys complete and no impossible nulls
+        for r in hist:
+            assert set(r) == {
+                "number", "good", "judged_by", "score",
+                "start_frame", "end_frame", "duration_seconds", "evaluations",
+            }
+            assert r["start_frame"] is not None and r["end_frame"] is not None
+
+    reconcile(data)
+
+    print("ALL SESSION-REPORT ASSERTIONS PASSED")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+### FILE: [backend/tests/exercises/test_hack_squat.py](backend/tests/exercises/test_hack_squat.py)
+
+```py
+"""Hack Squat configuration verification.
+
+Covers:
+  1. Registry/config invariants: single LEFT-side rule set, SIDE camera,
+     calibrated stage triggers (130/90) preserved, managed ROM extremes
+     (85/150) set, bounds (60-170) preserved, validation skeleton hidden.
+  2. Side-adaptation equivalence: the previous twin left_/right_ configuration
+     and the new single-LEFT configuration adapt to the SAME effective
+     landmarks on BOTH camera sides — while the new one additionally keeps the
+     exported rule names stable ("knee", "knee_unlocked") across sides.
+  3. Managed counter protocol: GOOD rep on full depth+extension+reversal;
+     BAD rep when depth (85°) is missed or the lifter bails before the top.
+  4. Engine end-to-end on synthetic side-view poses (left AND right visible):
+     reps count identically either way; recorded evaluation names stay
+     {"knee_unlocked"}; a locked-out (>170°) rep poisons the rep to BAD and
+     scores 80 (100 − 20 warning); a ROM-shallow rep is BAD by the counter
+     with NO failed evaluation (score 100 — counter-originated quality).
+
+Run from backend/:  python tests/exercises/test_hack_squat.py
+"""
+
+import math
+import sys
+import types
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/
+
+import os
+os.environ.setdefault("MODEL_PATH", "assets/models/pose_landmarker_lite.task")
+
+# ── Stub mediapipe (only PoseService needs it; these tests never call it) ──
+_mp = types.ModuleType("mediapipe")
+_mp_tasks = types.ModuleType("mediapipe.tasks")
+_mp_python = types.ModuleType("mediapipe.tasks.python")
+_mp_python.vision = types.ModuleType("mediapipe.tasks.python.vision")
+_mp.tasks = _mp_tasks
+_mp_tasks.python = _mp_python
+sys.modules.update({
+    "mediapipe": _mp, "mediapipe.tasks": _mp_tasks,
+    "mediapipe.tasks.python": _mp_python,
+    "mediapipe.tasks.python.vision": _mp_python.vision,
+})
+
+from src.core.pose_segments import PoseSegments
+from src.exercises.registry import registry
+from src.exercises.exercise import Camera
+from src.exercises.rules import AngleCounterRule, AngleValidationRule, Severity
+from src.services.rep_counter import RepCounter
+from src.utils.camera_side import adapt_rules
+
+W = H = 1000  # synthetic frame size (px)
+
+
+class _LM:
+    __slots__ = ("x", "y", "z", "visibility")
+
+    def __init__(self, x, y, visibility):
+        self.x, self.y, self.z, self.visibility = x, y, 0.0, visibility
+
+
+def hack_pose(knee_deg: float, visible: str):
+    """Side-view hack-squat pose with a controllable knee angle.
+
+    ``visible`` ("left" | "right") side gets full visibility (1.0), the hidden
+    side 0.3 (below get_points' 0.5 threshold, like a real side view). Both
+    legs carry real, mirrored geometry so a right-side detection can mirror
+    the LEFT rules and still measure a correct angle.
+    """
+    hip_y, knee_y = 0.55, 0.75
+    a = math.radians(180 - knee_deg)
+    lms = [_LM(0.5, 0.1, 0.3) for _ in range(33)]
+
+    def leg(hip_i, knee_i, ankle_i, x, vis):
+        knee = (x, knee_y)
+        ankle = (knee[0] + 0.25 * math.sin(a), knee[1] + 0.25 * math.cos(a))
+        lms[hip_i] = _LM(x, hip_y, vis)
+        lms[knee_i] = _LM(*knee, vis)
+        lms[ankle_i] = _LM(*ankle, vis)
+
+    l_vis, r_vis = (1.0, 0.3) if visible == "left" else (0.3, 1.0)
+    leg(23, 25, 27, 0.45, l_vis)                     # LEFT_LEG
+    leg(24, 26, 28, 0.55, r_vis)                     # RIGHT_LEG (mirrored geometry)
+    # upper-body fillers so the side detector sees both arms/shoulders
+    for i, vis, x in ((11, l_vis, 0.41), (13, l_vis, 0.40), (15, l_vis, 0.40),
+                      (12, r_vis, 0.59), (14, r_vis, 0.60), (16, r_vis, 0.60)):
+        lms[i] = _LM(x, 0.35, vis)
+    return lms
+
+
+def run_session(visible: str, reps):
+    """One synthetic session: 30 detection frames, then managed-path reps.
+
+    reps: list of (deep, top) knee-angle pairs. Each rep is played as: bottom
+    hold at ``deep`` (DOWN phase), rise through RETURNING, a top overshoot at
+    ``top + 5``, then the reversal at ``top`` — the managed counter completes
+    the rep exactly on the first decreasing frame >= max_rom_angle. Top
+    values keep ~2° of margin against get_points' pixel-quantization, which
+    can shave ~0.2° off the synthetic angles (152 plays as ~151.9, so a
+    nominal 150 would land *below* the 150° gate and never count).
+    """
+    from src.services.gym_engine import GymEngine
+
+    engine = GymEngine(registry.get("hack_squat"))
+    frame = 0
+    for _ in range(35):                                    # settle + detect side
+        engine.analyze(hack_pose(150, visible), W, H, frame)
+        frame += 1
+    for deep, top in reps:
+        for angle in [deep] * 5 + [140] * 3 + [top + 5] * 2 + [top] * 2:
+            engine.analyze(hack_pose(angle, visible), W, H, frame)
+            frame += 1
+    return engine
+
+
+def main():
+    # ── 1. Registry/config invariants ───────────────────────────────────────
+    ex = registry.get("hack_squat")
+    assert ex.camera == Camera.SIDE == "side"
+    assert [r.name for r in ex.counter_rules] == ["knee"]
+    counter = ex.counter_rules[0]
+    assert counter.joints == PoseSegments.LEFT_LEG == (23, 25, 27)
+    assert (counter.up_angle, counter.down_angle) == (130, 90)   # untouched calibration
+    # managed ROM path: extremes set, tempo gate off
+    assert (counter.min_rom_angle, counter.max_rom_angle) == (85, 150)
+    assert counter.min_rep_frames == 0
+    assert RepCounter([counter])._helper is not None             # CustomCounterHelper engages
+    assert [r.name for r in ex.validation_rules] == ["knee_unlocked"]
+    guard = ex.validation_rules[0]
+    assert (guard.min_angle, guard.max_angle) == (60, 170)
+    assert guard.severity == Severity.WARNING == "warning"
+    assert ex.display.show_validation_skeleton is False
+    assert ex.metadata.muscle_groups == ("quadriceps", "glutes", "hamstrings")
+
+    # ── 2. Side-adaptation equivalence: twins (old) vs single LEFT (new) ────
+    legacy_counters = [
+        AngleCounterRule(name="knee_left", joints=PoseSegments.LEFT_LEG, up_angle=130, down_angle=90),
+        AngleCounterRule(name="knee_right", joints=PoseSegments.RIGHT_LEG, up_angle=130, down_angle=90),
+    ]
+    legacy_validations = [
+        AngleValidationRule(name="knee_unlocked_left", joints=PoseSegments.LEFT_LEG,
+                            min_angle=60, max_angle=170, message="Don't lock your left knee"),
+        AngleValidationRule(name="knee_unlocked_right", joints=PoseSegments.RIGHT_LEG,
+                            min_angle=60, max_angle=170, message="Don't lock your right knee"),
+    ]
+    for side in ("left", "right"):
+        old_c = adapt_rules(legacy_counters, side)
+        new_c = adapt_rules([counter], side)
+        old_v = adapt_rules(legacy_validations, side)
+        new_v = adapt_rules([guard], side)
+        # SAME effective measurement: one rule, identical landmarks
+        assert len(old_c) == len(new_c) == 1
+        assert tuple(old_c[0].joints) == tuple(new_c[0].joints), side
+        assert len(old_v) == len(new_v) == 1
+        assert tuple(old_v[0].joints) == tuple(new_v[0].joints), side
+        # the old names flipped with the side; the new ones never move
+        assert new_c[0].name == "knee" and new_v[0].name == "knee_unlocked"
+        # the measured side is the detected side either way
+        expected_leg = PoseSegments.LEFT_LEG if side == "left" else PoseSegments.RIGHT_LEG
+        assert tuple(new_c[0].joints) == expected_leg and tuple(new_v[0].joints) == expected_leg
+    # …and the old setup did NOT have that stability — this was the real defect
+    assert {r.name for r in adapt_rules(legacy_counters, "left")} == {"knee_left"}
+    assert {r.name for r in adapt_rules(legacy_counters, "right")} == {"knee_right"}
+
+    # ── 3. Managed counter protocol: ROM gate + bailout + violations ────────
+    # GOOD rep: depth <= 85, extension >= 150, top reversal, no violations
+    good_counter = RepCounter([counter])
+    for angle in [160, 160, 80, 80, 140, 140, 152, 152, 150]:
+        good_counter.update({"knee": angle})
+    assert (good_counter.primary.count, good_counter.primary.good, good_counter.primary.bad) == (1, 1, 0)
+
+    # BAD rep — too shallow (never <= 85): bails back down before the top
+    # ...wait: shallow here means the ROM gate fails even when the top is reached
+    shallow_counter = RepCounter([counter])
+    for angle in [160, 160, 88, 88, 140, 140, 152, 152, 150]:
+        shallow_counter.update({"knee": angle})
+    assert (shallow_counter.primary.count, shallow_counter.primary.bad) == (1, 1)
+
+    # BAD rep — bailout: RETURNING then drops back below 90 before reaching 150
+    bail_counter = RepCounter([counter])
+    for angle in [160, 160, 80, 80, 140, 88, 88]:
+        bail_counter.update({"knee": angle})
+    assert (bail_counter.primary.count, bail_counter.primary.bad) == (1, 1)
+
+    # BAD rep — knee_unlocked failed anywhere inside the rep window poisons it
+    poison_counter = RepCounter([counter])
+    frames = [160, 160, 80, 80, 140, 175, 152, 152, 150]
+    for angle in frames:
+        poison = {"knee_unlocked"} if angle > 170 else set()
+        poison_counter.update({"knee": angle}, poison)
+    assert (poison_counter.primary.count, poison_counter.primary.bad) == (1, 1)
+
+    # ── 4. Engine end-to-end, both camera sides ─────────────────────────────
+    for visible in ("left", "right"):
+        engine = run_session(visible, reps=[(80, 152), (80, 152)])
+        history = engine.judge.history
+        assert len(history) == 2, (visible, len(history))
+        assert all(rep.good for rep in history)
+        # stable names in the record, whichever side was filmed
+        assert {e.rule_name for rep in history for e in rep.evaluations} == {"knee_unlocked"}
+
+        # locked-out top (177/172 measures > 170): the violation poisons the rep
+        engine2 = run_session(visible, reps=[(80, 152), (80, 172)])
+        rep2 = engine2.judge.history[1]
+        assert rep2.good is False                                  # managed path judges
+        guard_eval = {e.rule_name: e for e in rep2.evaluations}["knee_unlocked"]
+        assert guard_eval.passed is False and guard_eval.angle > 170.0
+
+    # report integration: lockout rep BAD + scored 80 (100 − 20 warning)
+    from src.analytics.analyzer import SessionAnalyzer
+
+    engine3 = run_session("left", reps=[(80, 152), (80, 172)])
+    report = SessionAnalyzer().build_report(
+        engine3.judge.history, exercise=engine3.exercise, fps=25.0,
+    )
+    assert [r.good for r in report.history] == [True, False]
+    assert [r.score for r in report.history] == [100.0, 80.0]
+    assert report.history[1].failed_rules == ("knee_unlocked",)
+    # managed counter: every rep is explicitly "counter"-judged —
+    # a good=False with/without failed evaluations is self-explained
+    assert {r.judged_by for r in report.history} == {"counter"}
+    assert report.summary.common_errors == {"knee_unlocked": 1}
+    stat = {row.rule: row for row in report.stats.rules}["knee_unlocked"]
+    assert (stat.evaluations, stat.failed) == (2, 1) and stat.success_rate == 50.0
+
+    # ROM-shallow rep (depth 88 > 85): BAD by the counter, but NO failed
+    # validation evaluation -> score 100. Counter-originated quality, by design
+    # (same semantics as biceps_curl; see the hack_squat module docstring).
+    engine4 = run_session("left", reps=[(80, 152), (88, 152)])
+    report4 = SessionAnalyzer().build_report(
+        engine4.judge.history, exercise=engine4.exercise, fps=25.0,
+    )
+    assert [r.good for r in report4.history] == [True, False]
+    assert report4.history[1].failed_rules == () and report4.history[1].score == 100.0
+    assert report4.summary.common_errors == {}
+
+    print("ALL HACK-SQUAT ASSERTIONS PASSED")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+### FILE: [backend/tests/integration/test_architecture.py](backend/tests/integration/test_architecture.py)
+
+```py
+"""Architecture refactor verification — proves the refactor changed no behavior.
+
+Covers:
+  1. Enums are ``str``-compatible with the literals they replaced.
+  2. Every registered exercise exposes typed ``ExerciseMetadata``/``Camera``.
+  3. Rule immutability is intact and the ValidationRule hierarchy is right.
+  4. ``validate_all`` dispatch still evaluates all three rule kinds correctly.
+  5. RepJudge severity ranking/classification behaves identically (enum or
+     plain-string severities, worst-severity de-duplication).
+  6. RepCounter (simple + CustomCounterHelper paths) still advances stages.
+  7. SessionAnalyzer severity weights accept enum- and str-keyed dicts alike.
+
+Run from backend/:  python tests/integration/test_architecture.py
+"""
+
+import sys
+import types
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/
+
+import os
+os.environ.setdefault("MODEL_PATH", "assets/models/pose_landmarker_lite.task")
+
+# ── Stub mediapipe (only PoseService needs it; these tests never call it) ──
+_mp = types.ModuleType("mediapipe")
+_mp_tasks = types.ModuleType("mediapipe.tasks")
+_mp_python = types.ModuleType("mediapipe.tasks.python")
+_mp_python.vision = types.ModuleType("mediapipe.tasks.python.vision")
+_mp.tasks = _mp_tasks
+_mp_tasks.python = _mp_python
+sys.modules.update({
+    "mediapipe": _mp,
+    "mediapipe.tasks": _mp_tasks,
+    "mediapipe.tasks.python": _mp_python,
+    "mediapipe.tasks.python.vision": _mp_python.vision,
+})
+
+import dataclasses
+
+from src.exercises.exercise import Camera, ExerciseMetadata
+from src.exercises.registry import registry
+from src.exercises.rules import (
+    AngleCounterRule, AngleROMValidationRule, AngleValidationRule,
+    DistanceValidationRule, LandmarkPair, LandmarkTriplet,
+    Severity, Stage, ValidationRule,
+)
+from src.exercises.validation import validate_all, violations
+from src.services.rep_counter import RepCounter
+from src.services.rep_judge import RepJudge
+
+
+class LM:
+    __slots__ = ("x", "y", "z", "visibility")
+
+    def __init__(self, px, py, w=1000, h=1000):
+        self.x, self.y = px / w, py / h
+        self.z = 0.0
+        self.visibility = 1.0
+
+
+def landmarks(points: dict[int, tuple[float, float]]):
+    lms = [LM(0, 0) for _ in range(33)]
+    for idx, (px, py) in points.items():
+        lms[idx] = LM(px, py)
+    return lms
+
+
+def main():
+    # ── 1. Enums are str-compatible (legacy comparisons keep working) ───────
+    assert Severity.ERROR == "error" and isinstance(Severity.ERROR, str)
+    assert Severity.WARNING == "warning" and Severity.INFO == "info"
+    assert Stage.UP == "up" and Stage.DOWN == "down" and Stage.RETURNING == "returning"
+    assert Camera.BOTH == "both" and Camera.SIDE == "side"
+    assert "error" in (Severity.ERROR, Severity.WARNING)          # membership both ways
+    assert {Severity.ERROR: 1}.get("error") == 1                  # dict keys interchangeable
+
+    # ── 2. Registry exercises: typed metadata & camera, configs unchanged ───
+    expected = {
+        "deadlift", "cable_chest_fly", "squat", "pushup", "biceps_curl",
+        "lat_pulldown", "leg_press", "hack_squat", "shoulder_press",
+    }
+    assert set(registry.list()) == expected
+    for name in registry.list():
+        ex = registry.get(name)
+        assert isinstance(ex.metadata, ExerciseMetadata), name
+        assert isinstance(ex.metadata.description, str) and ex.metadata.description, name
+        assert isinstance(ex.metadata.muscle_groups, tuple) and ex.metadata.muscle_groups, name
+        assert dataclasses.is_dataclass(ex.metadata)
+        try:
+            dataclasses.replace(ex.metadata, description="x")  # frozen but replaceable-copy
+        except Exception as e:
+            raise AssertionError(f"{name}: metadata not a proper frozen dataclass: {e}")
+        assert ex.camera in (Camera.BOTH, Camera.SIDE), name
+        assert ex.counter_rules, name
+
+    # spot-check a couple of values survived the refactor byte-for-byte
+    assert registry.get("shoulder_press").metadata.muscle_groups == ("shoulders", "triceps", "upper chest")
+    assert registry.get("hack_squat").camera == Camera.SIDE == "side"
+
+    # ── 3. Rule hierarchy & immutability ────────────────────────────────────
+    for cls in (AngleValidationRule, AngleROMValidationRule, DistanceValidationRule):
+        assert issubclass(cls, ValidationRule) and dataclasses.is_dataclass(cls)
+        assert cls.__dataclass_params__.frozen, cls
+    # deliberate: AngleCounterRule has NO base class (single kind — no hierarchy)
+    assert AngleCounterRule.__bases__ == (object,)
+
+    r = AngleValidationRule(
+        name="x", joints=(11, 13, 15), min_angle=0, max_angle=90, message="m",
+    )
+    assert r.severity == Severity.ERROR == "error"                # default preserved
+    try:
+        r.min_angle = 5
+        raise AssertionError("rules must be immutable")
+    except dataclasses.FrozenInstanceError:
+        pass
+
+    # ── 4. validate_all dispatch: all three kinds evaluate like before ──────
+    lms = landmarks({
+        11: (300, 300), 12: (700, 300),          # shoulders 400px apart
+        13: (300, 480), 15: (300, 660),          # L elbow/wrist straight down (180°)
+        14: (700, 480), 16: (750, 660),          # R wrist near shoulder-> narrow span
+    })
+    rules = [
+        AngleValidationRule(name="ang", joints=(11, 13, 15), min_angle=150, max_angle=180,
+                            message="a", severity=Severity.WARNING),
+        DistanceValidationRule(name="dist", measurement=(15, 16), reference=(11, 12),
+                               min_ratio=1.2, max_ratio=3.0, message="d", severity=Severity.ERROR),
+        AngleROMValidationRule(name="rom", joints=(11, 13, 15), min_rom_angle=60, max_rom_angle=170,
+                               message="r", severity=Severity.INFO),
+    ]
+    assert all(isinstance(rr.joints, tuple) for rr in rules if hasattr(rr, "joints"))
+    assert by_name_dist_structure_ok(rules)  # see helper below
+    results = validate_all(rules, lms, 1000, 1000, states={})
+    by_name = {x.rule_name: x for x in results}
+    assert by_name["ang"].passed                                  # ~180° in range
+    assert not by_name["dist"].passed                             # span 452.5/400 = 1.13 < 1.2
+    assert abs(by_name["dist"].angle - (452.548 / 400)) < 0.01
+    assert by_name["rom"].passed                                  # no state -> passes
+    assert by_name["dist"].severity == Severity.ERROR
+    assert [v.rule_name for v in violations(results)] == ["dist"]
+
+    # dispatch on the base type is unaffected by the new inheritance
+    assert all(isinstance(x, ValidationRule) for x in rules)
+
+    # ── 5. RepJudge: same classification & de-dup as before ─────────────────
+    j = RepJudge()
+    f_warn = dataclasses.replace(
+        next(x for x in results if x.rule_name == "dist"), severity=Severity.WARNING)
+    f_err = dataclasses.replace(f_warn, severity=Severity.ERROR)
+    j.observe([f_warn], frame=1)                                  # warning first...
+    j.observe([f_err], frame=2)                                   # ...then error: error must win
+    rep = j.finalize_rep(1, frame=3)
+    assert not rep.good and len(rep.violations) == 1
+    assert rep.violations[0].severity == Severity.ERROR == "error"
+
+    j2 = RepJudge()
+    j2.observe([f_warn], frame=1)                                 # warning only -> still BAD (unchanged rule)
+    assert not j2.finalize_rep(1, frame=2).good
+    j3 = RepJudge()                                               # nothing observed -> GOOD
+    assert j3.finalize_rep(1, frame=2).good
+
+    # plain-string severities still classify identically (legacy interop)
+    from src.exercises.validation import ValidationResult
+    j4 = RepJudge()
+    j4.observe([ValidationResult("n", "m", "error", False, None)], frame=1)
+    assert not j4.finalize_rep(1, frame=2).good
+
+    # ── 6. RepCounter: stage flow on both counting paths ────────────────────
+    simple = RepCounter([AngleCounterRule(name="knee", joints=(23, 25, 27), up_angle=160, down_angle=70)])
+    st = simple.update({"knee": 165})["knee"]
+    assert st.stage == "up" and st.count == 0
+    st = simple.update({"knee": 60})["knee"]
+    assert st.count == 1 and st.stage == "down"                    # rep completed on entering down
+    assert simple.update({"knee": 170})["knee"].stage == "up"
+
+    rom = RepCounter([AngleCounterRule(name="k", joints=(23, 25, 27), up_angle=120, down_angle=110,
+                                       min_rom_angle=80, max_rom_angle=160)])
+    assert rom._helper is not None                                 # custom path engaged as before
+    assert rom.update({"k": 100})["k"].stage == Stage.DOWN == "down"
+    assert rom.update({"k": 130})["k"].stage == Stage.RETURNING == "returning"
+
+    # default stage labels still the legacy strings
+    assert AngleCounterRule(name="x", joints=(1, 2, 3), up_angle=1, down_angle=0).up_stage == "up"
+
+    # ROM bounds use the unified min_/max_ prefix on the counter rule too
+    cr = AngleCounterRule(name="x", joints=(1, 2, 3), up_angle=1, down_angle=0,
+                          min_rom_angle=80, max_rom_angle=160)
+    assert (cr.min_rom_angle, cr.max_rom_angle) == (80, 160)
+
+    # ── 7. SessionAnalyzer: enum- and str-keyed severity weights both work ──
+    from src.analytics.analyzer import DEFAULT_SEVERITY_WEIGHTS, SessionAnalyzer
+    assert DEFAULT_SEVERITY_WEIGHTS[Severity.ERROR] == 50.0
+    assert DEFAULT_SEVERITY_WEIGHTS["error"] == 50.0               # str lookup works too
+    a = SessionAnalyzer({"error": 1.0, "warning": 0.5, "info": 0.0})
+    assert a.severity_weights.get(Severity.ERROR) == 1.0           # enum lookup on user dict
+
+    # ── 8. camera-side adaptation remaps measurement/reference pairs ────────
+    from src.utils.camera_side import adapt_rules
+    left_rules = [
+        AngleValidationRule(name="back", joints=(11, 23, 25), min_angle=0, max_angle=180, message="x"),
+        DistanceValidationRule(name="grip", measurement=(15, 11), reference=(11, 13),
+                               min_ratio=0, max_ratio=5, message="y"),
+    ]
+    adapted = adapt_rules(left_rules, "right")
+    assert adapted[0].joints == (12, 24, 26)
+    assert adapted[1].measurement == (16, 12) and adapted[1].reference == (12, 14)
+    # symmetric (both-side) distance rule passes through untouched
+    both = [DistanceValidationRule(name="wrists", measurement=(15, 16), reference=(11, 12),
+                                   min_ratio=1.2, max_ratio=3, message="z")]
+    assert adapt_rules(both, "right")[0] is both[0]
+
+    print("ALL ARCHITECTURE ASSERTIONS PASSED")
+
+
+def by_name_dist_structure_ok(rules):
+    """Landmark groups are named pairs/triplets, not numbered primitives."""
+    dist = next(r for r in rules if isinstance(r, DistanceValidationRule))
+    assert dist.measurement == (15, 16) and dist.reference == (11, 12)
+    assert not hasattr(dist, "point1") and not hasattr(dist, "reference1")
+    # aliases document the shapes
+    assert LandmarkPair == tuple[int, int]
+    assert LandmarkTriplet == tuple[int, int, int]
+    return True
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+### FILE: [backend/tests/services/test_distance_handling.py](backend/tests/services/test_distance_handling.py)
+
+```py
+"""Logic test for the generalized distance-violation handling in GymEngine.
+
+Drives engine.analyze() with synthetic shoulder-press landmarks and asserts:
+  1. Reps with proper wrist spacing are counted GOOD.
+  2. A rep whose wrists come too close AT THE TOP of the press is BAD, and
+     the session history records *why* (violations list is not empty).
+  3. Exercises without DistanceValidationRules are completely unaffected.
+
+Run from backend/:  python tests/services/test_distance_handling.py
+"""
+
+import sys
+import types
+from pathlib import Path
+from math import cos, sin, radians
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/
+
+import os
+os.environ.setdefault("MODEL_PATH", "assets/models/pose_landmarker_lite.task")
+
+# ── Stub mediapipe (only PoseService needs it; analyze() never touches it) ──
+_mp = types.ModuleType("mediapipe")
+_mp_tasks = types.ModuleType("mediapipe.tasks")
+_mp_python = types.ModuleType("mediapipe.tasks.python")
+_mp_python.vision = types.ModuleType("mediapipe.tasks.python.vision")
+_mp.tasks = _mp_tasks
+_mp_tasks.python = _mp_python
+sys.modules.update({
+    "mediapipe": _mp,
+    "mediapipe.tasks": _mp_tasks,
+    "mediapipe.tasks.python": _mp_python,
+    "mediapipe.tasks.python.vision": _mp_python.vision,
+})
+
+from src.exercises.registry import registry
+from src.services.gym_engine import GymEngine
+
+W = H = 1000  # synthetic frame size (px)
+
+
+class LM:
+    __slots__ = ("x", "y", "z", "visibility")
+
+    def __init__(self, px, py):
+        self.x, self.y = px / W, py / H
+        self.z = 0.0
+        self.visibility = 1.0
+
+
+# Landmark indices
+L_SHOULDER, R_SHOULDER = 11, 12
+L_ELBOW, R_ELBOW = 13, 14
+L_WRIST, R_WRIST = 15, 16
+L_HIP, R_HIP = 23, 24
+
+
+def pose(beta_deg: float):
+    """Build a 33-landmark pose for a shoulder press.
+
+    beta: arm bend — 0° = arm straight overhead (elbow angle 180°),
+          120° = weight at chest (elbow angle ~60°).
+    Shoulders are 400px apart; wrists flare out symmetrically with beta, so:
+      beta=20  -> wrists 523px apart -> ratio 1.31 (PASS >= 1.2)
+      beta=2   -> wrists 413px apart -> ratio 1.03 (FAIL, too narrow)
+      beta=120 -> wrists 711px apart -> ratio 1.78 (PASS <= 3.0)
+    """
+    beta = radians(beta_deg)
+    pts = [LM(0, 0) for _ in range(33)]
+
+    pts[L_SHOULDER] = LM(300, 300)
+    pts[R_SHOULDER] = LM(700, 300)
+    pts[L_ELBOW] = LM(300, 480)
+    pts[R_ELBOW] = LM(700, 480)
+    # Wrist sits *below* the elbow (arm hanging), so the elbow angle is
+    # 180° - beta as intended: beta=20 -> ~160° (up), beta=120 -> ~60° (down).
+    pts[L_WRIST] = LM(300 - 180 * sin(beta), 480 + 180 * cos(beta))
+    pts[R_WRIST] = LM(700 + 180 * sin(beta), 480 + 180 * cos(beta))
+    pts[L_HIP] = LM(300, 650)
+    pts[R_HIP] = LM(700, 650)
+    return pts
+
+
+UP_WIDE = 20        # arms overhead, wrists properly wide   -> no violation
+UP_NARROW = 2       # arms overhead, wrists too close       -> distance violation
+DOWN = 120          # weight at chest
+
+
+def run_sequence(engine, sequence):
+    for frame_idx, beta in enumerate(sequence):
+        engine.analyze(pose(beta), W, H, frame_idx)
+
+
+def main():
+    exercise = registry.get("shoulder_press")
+    engine = GymEngine(exercise)
+
+    assert engine._distance_rule_names == {"left_shoulder_wrist_distance"}, \
+        f"distance rules not discovered: {engine._distance_rule_names}"
+
+    sequence = (
+        [UP_WIDE] * 3 + [DOWN] * 3      # rep 1: good
+        + [UP_NARROW] * 3 + [DOWN] * 3  # rep 2: wrists narrow at top -> bad
+        + [UP_WIDE] * 3 + [DOWN] * 3    # rep 3: good
+    )
+    run_sequence(engine, sequence)
+
+    history = engine.judge.history
+    total, good, bad = (
+        engine.judge.total_reps, engine.judge.good_reps, engine.judge.bad_reps,
+    )
+    print(f"reps: total={total} good={good} bad={bad}")
+    for rep in history:
+        status = "GOOD" if rep.good else "BAD"
+        names = [v.rule_name for v in rep.violations]
+        print(f"  rep #{rep.number}: {status}  violations={names}")
+
+    assert total == 3, f"expected 3 reps, got {total}"
+    assert good == 2, f"expected 2 good reps, got {good}"
+    assert bad == 1, f"expected 1 bad rep, got {bad}"
+
+    rep2 = history[1]
+    assert not rep2.good, "rep #2 (narrow wrists at top) should be BAD"
+    assert any(v.rule_name == "left_shoulder_wrist_distance" for v in rep2.violations), \
+        "rep #2 should carry the distance violation explaining why it is bad"
+
+    # ── Regression: exercises without distance rules are untouched ────────
+    for name in ("squat", "pushup", "deadlift", "lat_pulldown", "cable_chest_fly"):
+        e = GymEngine(registry.get(name))
+        assert e._distance_rule_names == set(), f"{name}: unexpected distance rules"
+        assert e._distance_violation_in_current_rep is False
+
+    print("\nALL ASSERTIONS PASSED")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+### FILE: [backend/tests/services/test_video_source.py](backend/tests/services/test_video_source.py)
+
+```py
+"""Video-source resolution & diagnostics verification.
+
+Covers ``src/services/video_source.py`` — the shared source-acquisition layer
+used by the CLI (``src.main``), ``GymEngine.run`` and the WebSocket live
+runner:
+
+  1. Resolution order: as-given (cwd) → videos_dir/<arg> → videos_dir/<name>.
+  2. Missing inputs yield ``None`` from resolve_video_path, not exceptions.
+  3. ``VideoSourceError`` is a ``RuntimeError`` (backward-compatible catching).
+  4. Diagnosis messages name every tried path, describe the real contents of
+     the videos directory, and suggest actionable fixes (file/.env/webcam).
+  5. ``open_capture`` raises actionable errors for: no source, missing file,
+     undecodable file, unopenable webcam — and returns an *opened* capture,
+     applying the frame size, on success.
+
+Run from backend/:  python tests/services/test_video_source.py
+"""
+
+import os
+import sys
+import types
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/
+
+os.environ.setdefault("MODEL_PATH", "assets/models/pose_landmarker_lite.task")
+
+# ── Stub mediapipe (importing src.services pulls in gym_engine → pose_service)
+_mp = types.ModuleType("mediapipe")
+_mp_tasks = types.ModuleType("mediapipe.tasks")
+_mp_python = types.ModuleType("mediapipe.tasks.python")
+_mp_python.vision = types.ModuleType("mediapipe.tasks.python.vision")
+_mp.tasks = _mp_tasks
+_mp_tasks.python = _mp_python
+sys.modules.update({
+    "mediapipe": _mp,
+    "mediapipe.tasks": _mp_tasks,
+    "mediapipe.tasks.python": _mp_python,
+    "mediapipe.tasks.python.vision": _mp_python.vision,
+})
+
+import shutil
+import tempfile
+
+from src.services.video_source import (
+    VideoSourceError,
+    diagnose_model_error,
+    diagnose_video_error,
+    open_capture,
+    resolve_video_path,
+)
+
+try:
+    import cv2
+except ImportError:  # pragma: no cover - OpenCV optional for part of the suite
+    cv2 = None
+
+
+class FakeCap:
+    """Minimal cv2.VideoCapture stand-in for the webcam tests."""
+    instances = []
+
+    def __init__(self, opened):
+        self._opened = opened
+        self.released = False
+        self.sets = []
+        FakeCap.instances.append(self)
+
+    def set(self, prop, value):
+        self.sets.append((prop, value))
+
+    def isOpened(self):
+        return self._opened
+
+    def release(self):
+        self.released = True
+
+
+def _fake_cv2(cap: FakeCap) -> types.ModuleType:
+    mod = types.ModuleType("cv2")
+    mod.VideoCapture = lambda *_a, **_k: cap
+    mod.CAP_PROP_FRAME_WIDTH = 3
+    mod.CAP_PROP_FRAME_HEIGHT = 4
+    return mod
+
+
+def expect_raises(exc_type, fn, needle=None):
+    try:
+        fn()
+    except exc_type as exc:
+        if needle is not None:
+            assert needle.lower() in str(exc).lower(), f"missing {needle!r} in:\n{exc}"
+        return exc
+    raise AssertionError(f"expected {exc_type.__name__}")
+
+
+# --------------------------------------------------------------------------
+# 1. Resolution order
+# --------------------------------------------------------------------------
+def test_resolution_order(tmp: Path):
+    cwd_dir = tmp / "cwd"
+    videos = tmp / "videos"
+    cwd_file = cwd_dir / "clip.mp4"
+    vid_file = videos / "clip.mp4"
+    cwd_dir.mkdir(parents=True)
+    videos.mkdir()
+    cwd_file.write_bytes(b"cwd")
+    vid_file.write_bytes(b"videos")
+
+    old_cwd = os.getcwd()
+    os.chdir(cwd_dir)
+    try:
+        # absolute path: returned verbatim
+        assert resolve_video_path(str(vid_file), videos) == vid_file
+        # as-given (cwd) beats the videos directory
+        assert resolve_video_path("clip.mp4", videos) == cwd_file
+        # videos_dir/<arg> step: argument with a directory part
+        nested = videos / "sessions"
+        nested.mkdir()
+        (nested / "s.mp4").write_bytes(b"x")
+        assert resolve_video_path("sessions/s.mp4", videos) == nested / "s.mp4"
+    finally:
+        os.chdir(old_cwd)
+
+    # name fallback: stale 'assets/videos/x.mp4'-style argument
+    stale_arg = "assets/videos/clip.mp4"
+    # (videos/assets/videos/clip.mp4 must NOT exist for the name step to win)
+    assert resolve_video_path(stale_arg, videos) == vid_file
+
+    # nothing exists → None (and an absolute miss does not scan videos_dir)
+    assert resolve_video_path("nope.mp4", videos) is None
+    assert resolve_video_path(str(tmp / "abs" / "nope.mp4"), videos) is None
+    print("1. resolution order: OK")
+
+
+# --------------------------------------------------------------------------
+# 2. Error type compatibility
+# --------------------------------------------------------------------------
+def test_error_type():
+    assert issubclass(VideoSourceError, RuntimeError)
+    print("2. VideoSourceError is a RuntimeError: OK")
+
+
+# --------------------------------------------------------------------------
+# 3. Diagnosis messages
+# --------------------------------------------------------------------------
+def test_diagnoses(tmp: Path):
+    videos = tmp / "videos"
+
+    # no source configured
+    msg = diagnose_video_error(None, videos)
+    assert "No video source configured" in msg
+    for needle in ("VIDEO_PATH", "USE_WEBCAM", "src.main <exercise> c"):
+        assert needle in msg, needle
+
+    # missing file → tried paths + directory overview + fixes
+    videos.mkdir(parents=True)
+    (videos / "demo.mp4").write_bytes(b"x")
+    arg = tmp / "missing.mp4"
+    msg = diagnose_video_error(str(arg), videos)
+    assert f"Video file not found: {arg}" in msg
+    assert f"  - {arg}" in msg                      # tried path listed
+    assert "demo.mp4" in msg                         # real contents shown
+    assert str(videos / arg.name) in msg             # 'place the file at' fix
+    for needle in ("VIDEO_PATH", "backend/.env", "webcam"):
+        assert needle in msg, needle
+
+    # missing directory overview
+    gone = tmp / "gone"
+    msg = diagnose_video_error("x.mp4", gone)
+    assert f"does not exist: {gone}" in msg
+    assert "mkdir" in msg
+
+    # relative argument also lists the videos_dir/<name> candidate
+    vids2 = tmp / "vids2"
+    msg = diagnose_video_error("assets/videos/x.mp4", vids2)
+    assert str(vids2 / "x.mp4") in msg
+
+    # model error
+    msg = diagnose_model_error(tmp / "models" / "pose.task")
+    assert f"Pose model file not found: {tmp / 'models' / 'pose.task'}" in msg
+    assert "MODEL_PATH" in msg and "http" in msg
+    print("3. diagnosis messages: OK")
+
+
+# --------------------------------------------------------------------------
+# 4. open_capture failure modes (+ successful acquisition when OpenCV exists)
+# --------------------------------------------------------------------------
+def test_open_capture(tmp: Path):
+    videos = tmp / "videos"
+    videos.mkdir(parents=True)
+
+    # no source at all
+    expect_raises(VideoSourceError, lambda: open_capture(), "No video source")
+    expect_raises(
+        VideoSourceError,
+        lambda: open_capture(video_path=""),
+        "No video source",
+    )
+    # missing file
+    expect_raises(
+        VideoSourceError,
+        lambda: open_capture(video_path="ghost.mp4", videos_dir=videos),
+        "not found",
+    )
+
+    if cv2 is None:
+        print("4. open_capture failures: OK  (cv2 absent — success paths skipped)")
+        test_webcam(FakeCap(False))
+        return
+
+    # undecodable file: exists, but OpenCV can't open it
+    junk = videos / "broken.mp4"
+    junk.write_bytes(os.urandom(4096))
+    expect_raises(
+        VideoSourceError,
+        lambda: open_capture(video_path=str(junk)),
+        "could not decode",
+    )
+
+    # successful acquisition: bare name resolved via videos_dir, capture opened
+    clip = _write_clip(videos / "clip.mp4")
+    if clip is None:
+        print("4. open_capture failures: OK  (mp4v writer unavailable — e2e skipped)")
+    else:
+        cap = open_capture(video_path="clip.mp4", videos_dir=videos)
+        assert cap.isOpened()
+        ok, frame = cap.read()
+        assert ok and frame is not None and frame.shape[2] == 3
+        cap.release()
+        print("4. open_capture: failures + real-clip acquisition: OK")
+
+    test_webcam(FakeCap(False))
+
+
+def _write_clip(path: Path):
+    """Write a tiny readable mp4v clip; None when the codec is unavailable."""
+    writer = cv2.VideoWriter(
+        str(path), cv2.VideoWriter_fourcc(*"mp4v"), 25.0, (64, 48)
+    )
+    if not writer.isOpened():
+        writer.release()
+        return None
+    import numpy as np
+
+    frame = np.zeros((48, 64, 3), dtype="uint8")
+    for _ in range(3):
+        writer.write(frame)
+    writer.release()
+    return path
+
+
+# --------------------------------------------------------------------------
+# 5. Webcam diagnostics via a stubbed cv2 (no hardware required)
+# --------------------------------------------------------------------------
+def test_webcam(cap: FakeCap):
+    real = sys.modules.get("cv2")
+    sys.modules["cv2"] = _fake_cv2(cap)
+    try:
+        expect_raises(
+            VideoSourceError,
+            lambda: open_capture(use_webcam=True, webcam_index=3),
+            "webcam at index 3",
+        )
+        # frame size applied before the open check, capture released after
+        assert len(cap.sets) == 2
+        assert cap.released is True
+    finally:
+        if real is not None:
+            sys.modules["cv2"] = real
+        else:
+            del sys.modules["cv2"]
+    print("5. webcam diagnostics (stubbed cv2): OK")
+
+
+def main():
+    tmp_root = Path(tempfile.mkdtemp(prefix="ai_gym_video_src_"))
+    try:
+        test_resolution_order(tmp_root / "t1")
+        test_error_type()
+        test_diagnoses(tmp_root / "t3")
+        test_open_capture(tmp_root / "t4")
+        # success-path webcam: stubbed cv2 reports an opened camera
+        cap = FakeCap(True)
+        real = sys.modules.get("cv2")
+        sys.modules["cv2"] = _fake_cv2(cap)
+        try:
+            opened = open_capture(use_webcam=True, webcam_index=0, frame_size=None)
+            assert opened is cap and cap.sets == []  # frame_size=None → no set()
+        finally:
+            if real is not None:
+                sys.modules["cv2"] = real
+            else:
+                del sys.modules["cv2"]
+        print("6. webcam success path (stubbed cv2): OK")
+    finally:
+        shutil.rmtree(tmp_root, ignore_errors=True)
+
+    print("\nAll video_source tests passed ✔")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
 ### FILE: [backend/tests/test_architecture.py](backend/tests/test_architecture.py)
 
 ```py
@@ -7288,5 +8804,5 @@ if __name__ == "__main__":
 
 ## EXPORT SUMMARY
 
-- Files exported: 54
-- Lines exported: 6742
+- Files exported: 59
+- Lines exported: 8159

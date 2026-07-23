@@ -67,6 +67,12 @@ class AppSettings(BaseSettings):
     SAVE_OUTPUT: bool = False
     OUTPUT_PATH: Path = RENDERED_DIR / "result.mp4"
 
+    # 3D Mode: true = use world landmarks (camera independent, more accurate)
+    # false = use 2D image landmarks (faster, legacy)
+    # Drawing is ALWAYS 2D regardless of this setting
+    USE_3D: bool = True
+    ENABLE_SMOOTHING: bool = True  # OneEuroFilter for 3D z jitter reduction
+
     # Session analytics: frame rate used to turn per-repetition frame spans
     # into durations (seconds) in the generated SessionReport.
     ANALYTICS_FPS: float = 25.0

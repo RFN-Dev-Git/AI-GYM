@@ -16,11 +16,12 @@ class Camera(str, Enum):
 
     SIDE selects the side-aware pipeline (``CameraSideDetector`` +
     ``adapt_rules`` mirror left/right rules onto the visible side); BOTH
-    skips it.
+    skips it. FRONT is for front-facing camera exercises like lateral raises.
     """
 
     BOTH = "both"
     SIDE = "side"
+    FRONT = "front"
 
 
 @dataclass(frozen=True)

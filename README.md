@@ -97,15 +97,15 @@ make build    # typecheck + production bundle of the frontend
 
 ## Communicating with the backend
 
-| Channel | Purpose |
-|---|---|
-| `GET  /api/exercises` | exercise catalogue (from the registry) |
-| `GET  /api/sessions` / `GET /api/sessions/{id}` | workout history / full report |
-| `DELETE /api/sessions/{id}` | delete a report |
-| `GET/PUT /api/settings` | editable runtime settings (.env-backed) |
-| `POST /api/uploads` | upload a workout video (web app flow) → `{id}` |
-| `GET  /api/uploads` / `DELETE /api/uploads/{id}` | list / delete uploads |
-| `GET  /api/downloads/rendered/{name}` | download a rendered session video |
+| Channel                                                            | Purpose                                                                     |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `GET  /api/exercises`                                              | exercise catalogue (from the registry)                                      |
+| `GET  /api/sessions` / `GET /api/sessions/{id}`                    | workout history / full report                                               |
+| `DELETE /api/sessions/{id}`                                        | delete a report                                                             |
+| `GET/PUT /api/settings`                                            | editable runtime settings (.env-backed)                                     |
+| `POST /api/uploads`                                                | upload a workout video (web app flow) → `{id}`                              |
+| `GET  /api/uploads` / `DELETE /api/uploads/{id}`                   | list / delete uploads                                                       |
+| `GET  /api/downloads/rendered/{name}`                              | download a rendered session video                                           |
 | `WS   /ws/live?exercise=&source=webcam\|video[&video=upload:<id>]` | live stream: binary JPEG frames + JSON state, `{"action":"stop"}` to finish |
 
 Built to grow into: authentication, multi-user, database, cloud, leaderboards

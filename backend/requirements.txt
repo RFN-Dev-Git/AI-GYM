@@ -1,7 +1,10 @@
+# Core ML
 mediapipe==0.10.32
-opencv_contrib_python==4.5.5.64
-opencv_python==4.11.0.86
-opencv_python_headless==4.11.0.86
+
+# OpenCV - CHOOSE ONE based on your environment:
+opencv-python==4.11.0.86
+
+# Config
 pydantic_settings==2.14.2
 
 # API server (full-stack)

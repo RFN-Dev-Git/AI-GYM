@@ -1,14 +1,8 @@
-"""Live coaching session runner — streams an engine session over a queue.
+"""Live coaching session runner — NOW FULL 3D.
 
-A single background thread drives the *existing* pipeline exactly the way
-``GymEngine.run`` does (PoseService -> GymEngine.analyze -> overlay render),
-but instead of ``cv2.imshow`` it publishes events for the WebSocket layer:
-
-* ``bytes``  — one JPEG per processed frame (binary WS message)
-* ``dict``   — JSON state updates: ``{"type": "state" | "end" | "error"}``
-
-Nothing here reimplements counting, validation, or rendering — the engine's
-own methods produce everything; this class only pumps and packages.
+Streams an engine session over a queue:
+- Analysis: 3D world landmarks (camera independent)
+- Rendering: 2D image landmarks (screen space)
 """
 
 import queue
@@ -27,41 +21,28 @@ from ..services.video_source import VideoSourceError, open_capture
 from ..services.pose_service import PoseService
 from ..utils.render import fit_to_screen
 
-# Live state is throttled: frames stream at capture rate, metrics at ~15 Hz.
 _STATE_EVERY_N_FRAMES = 2
 _STREAM_MAX_WIDTH = 960
 _JPEG_QUALITY = 70
-
 _DEFAULT_WEIGHTS = {"error": 50.0, "warning": 20.0, "info": 10.0}
 
 
 class LiveSession(threading.Thread):
-    """One live workout: capture + analyze + render + publish until stopped.
 
-    Args:
-        exercise:  Registry key of the exercise to run.
-        source:    ``"webcam"`` (index from settings) or ``"video"``
-                   (``video_path`` / settings.VIDEO_PATH).
-        events:    Thread-safe queue the WS handler drains (bytes | dict).
-        video_path: Explicit video override (only used when source="video").
-    """
-
-    def __init__(self, exercise: str, source: str, events: "queue.Queue", video_path: Optional[str] = None) -> None:
+    def __init__(self, exercise: str, source: str, events: "queue.Queue", video_path: Optional[str] = None, use_3d: bool | None = None) -> None:
         super().__init__(daemon=True)
         self.exercise_key = exercise
         self.source = source
         self.video_path = video_path
         self.events = events
+        # If not specified, use from settings/.env
+        self.use_3d = use_3d if use_3d is not None else settings.USE_3D
         self._stop = threading.Event()
 
     def stop(self) -> None:
         self._stop.set()
 
-    # ------------------------------------------------------------------
-    # Event helpers
-    # ------------------------------------------------------------------
     def _publish(self, event) -> None:
-        """Drop-oldest publish: a slow consumer never stalls the workout."""
         try:
             self.events.put_nowait(event)
         except queue.Full:
@@ -76,7 +57,6 @@ class LiveSession(threading.Thread):
 
     @staticmethod
     def _live_score(results, weights) -> Optional[float]:
-        """Instant form score from the CURRENT frame's failing rules."""
         penalty = sum(weights.get(r.severity, weights.get(str(r.severity), 0.0))
                       for r in results if not r.passed)
         return max(0.0, 100.0 - penalty)
@@ -99,11 +79,12 @@ class LiveSession(threading.Thread):
             "good": engine.judge.good_reps,
             "bad": engine.judge.bad_reps,
             "stage": stage_map.get(primary.stage, primary.stage),
-            "angle": round(primary.angle, 1),
+            "angle": round(primary.angle, 1) if primary.angle else 0,
             "last_rep": ("good" if last.good else "bad") if last else None,
             "live_score": self._live_score(results, _DEFAULT_WEIGHTS),
             "side": (engine.side_detector.detected_side if engine.side_detector else "both"),
             "adapting": not engine.rules_adapted,
+            "is_3d": engine.use_3d,
             "feedback": [r.message for r in failing][:3],
             "rules": [
                 {
@@ -112,20 +93,18 @@ class LiveSession(threading.Thread):
                     "severity": str(getattr(r.severity, "value", r.severity)),
                     "message": r.message,
                     "value": round(r.angle, 1) if r.angle is not None else None,
+                    "is_3d": getattr(r, 'is_3d', True)
                 }
                 for r in results
             ],
         }
 
-    # ------------------------------------------------------------------
-    # Main loop (mirrors GymEngine.run's composition, output = queue)
-    # ------------------------------------------------------------------
     def run(self) -> None:
         from ..exercises.registry import registry
 
         try:
-            engine = GymEngine(registry.get(self.exercise_key))
-        except Exception as exc:  # unknown exercise
+            engine = GymEngine(registry.get(self.exercise_key), use_3d=self.use_3d, smooth=True)
+        except Exception as exc:
             self._publish({"type": "error", "message": f"Unknown exercise: {exc}"})
             return
 
@@ -140,10 +119,6 @@ class LiveSession(threading.Thread):
             self._publish({"type": "error", "message": str(exc)})
             return
 
-        # Optional rendered-video output (mirrors GymEngine.run: mp4v, 25 fps):
-        # annotated frames are written per-session under output/videos/ so the
-        # web app can offer the user a download after the workout. Best-effort:
-        # a writer failure never kills the workout or the report export.
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in engine.exercise.name)
         stamp = time.strftime("%Y%m%d_%H%M%S")
         writer = None
@@ -188,13 +163,16 @@ class LiveSession(threading.Thread):
                 break
             h, w = frame.shape[:2]
             timestamp = int((frame_id / fps) * 1000)
-            detected = pose_service.detect(frame, timestamp)
+            detection = pose_service.detect(frame, timestamp)
             frame_result = None
-            if detected and detected.pose_landmarks:
-                lm = detected.pose_landmarks[0]
-                frame_result = engine.analyze(lm, w, h, frame_id)
+            if detection and detection.pose_landmarks:
+                frame_result = engine.analyze(
+                    detection.pose_landmarks, 
+                    detection.world_landmarks,
+                    w, h, frame_id, timestamp
+                )
                 results = frame_result.results
-                engine._render(frame, frame_result, lm, w, h)
+                engine._render(frame, frame_result, detection.pose_landmarks, w, h)
 
             if writer is not None:
                 writer.write(frame)
@@ -218,9 +196,8 @@ class LiveSession(threading.Thread):
         if writer is not None:
             writer.release()
 
-        # ── Finalize & export (always: the app depends on the report) ──
         elapsed = time.perf_counter() - start
-        ended: Dict[str, Any] = {"type": "end", "reps": engine.judge.total_reps}
+        ended: Dict[str, Any] = {"type": "end", "reps": engine.judge.total_reps, "is_3d": engine.use_3d}
         if rendered_name is not None:
             ended["rendered_video"] = rendered_name
         if rendered_error is not None:

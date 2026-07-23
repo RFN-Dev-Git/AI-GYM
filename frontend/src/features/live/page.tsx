@@ -159,6 +159,11 @@ export function LivePage() {
           <h1 className="truncate text-xl font-bold tracking-tight">{exerciseName}</h1>
         </div>
         <StatusPill status={status} ready={canStart} />
+        {state?.is_3d && (
+          <Badge variant="primary" className="gap-1">
+            <span className="size-1.5 rounded-full bg-white animate-pulse" /> 3D Mode
+          </Badge>
+        )}
         {state?.side && (
           <Badge variant="outline">
             <ScanFace className="size-3" /> {state.side === "both" ? "Front view" : `${titleCase(state.side)} side`}
@@ -420,7 +425,10 @@ export function LivePage() {
           {/* Rule lights (available once the stream reports them) */}
           {state && state.rules.length > 0 && (
             <div className="rounded-xl border border-border/60 bg-card p-4">
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Form checks</p>
+              <p className="mb-2 flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <span>Form checks</span>
+                {state.is_3d && <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">3D • {state.rules.filter(r=>r.is_3d).length}/{state.rules.length} 3D</span>}
+              </p>
               <ul className="space-y-2">
                 {state.rules.map((r) => (
                   <li key={r.name} className="flex items-center justify-between gap-2 text-sm">
@@ -429,13 +437,19 @@ export function LivePage() {
                         ? <CheckCircle2 className="size-4 shrink-0 text-success" />
                         : <XCircle className={cn("size-4 shrink-0", r.severity === "warning" ? "text-warning" : "text-destructive")} />}
                       <span className="truncate">{titleCase(r.name)}</span>
+                      {r.severity === "warning" && !r.passed && <Badge variant="warning" className="text-[9px] px-1 py-0">WARN</Badge>}
+                      {r.severity === "error" && !r.passed && <Badge variant="destructive" className="text-[9px] px-1 py-0">ERR</Badge>}
                     </span>
-                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                      {r.value != null ? r.value.toFixed(0) : "—"}
+                    <span className="flex items-center gap-1.5">
+                      {r.is_3d && <span className="text-[9px] text-primary">3D</span>}
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {r.value != null ? r.value.toFixed(0) : "—"}
+                      </span>
                     </span>
                   </li>
                 ))}
               </ul>
+              <p className="mt-2 text-[10px] text-muted-foreground">⚠️ WARNING = GOOD with reduced score (80) • ❌ ERROR = BAD rep (score 50)</p>
             </div>
           )}
 

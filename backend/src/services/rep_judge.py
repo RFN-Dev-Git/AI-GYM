@@ -153,11 +153,17 @@ class RepJudge:
         If ``force_good`` is provided (not None), it overrides the internal
         violation tracking. This is used when RepCounter has already decided
         quality (tracking violations only from DOWN phase start onward).
+
+        Good/Bad classification rule (as per docs and desired behavior):
+        - ERROR severity -> BAD (dangerous, invalid rep)
+        - WARNING/INFO severity -> GOOD but reduced score (not perfect form)
+        This matches the class docstring: good iff no error-severity violation.
         """
         if force_good is not None:
             good = force_good
         else:
-            bad = any(v.severity in (Severity.ERROR, Severity.WARNING) for v in self._violations.values())
+            # Only ERROR makes BAD - WARNING/INFO only reduce score but rep still GOOD
+            bad = any(v.severity == Severity.ERROR for v in self._violations.values())
             good = not bad
         result = RepResult(
             number=rep_number,

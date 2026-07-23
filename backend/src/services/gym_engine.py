@@ -1,4 +1,11 @@
-"""Generic, exercise-agnostic training engine."""
+"""Generic, exercise-agnostic training engine - NOW FULL 3D.
+
+Key change: Analysis uses 3D world landmarks (camera independent), 
+Rendering uses 2D image landmarks (screen space).
+
+GymEngine knows NOTHING about specific exercises. Its job is:
+detect pose -> 3D angle calculation -> validation in 3D -> render in 2D
+"""
 
 import datetime
 import time
@@ -10,9 +17,10 @@ from ..core import Colors
 from ..exercises.exercise import Camera, Exercise
 from ..exercises.validation import ValidationResult, validate_all, violations
 from ..exercises.rules import DistanceValidationRule, Severity, Stage
-from ..utils.geometry import ComputedAngle, calc_angle, get_points
+from ..utils.geometry import ComputedAngle, calc_angle, calc_angle_3d, get_points, get_points_3d
 from ..utils.render import draw_angle_arc, draw_angle_labels, draw_skeleton, draw_stats, fit_to_screen, draw_segment_line
 from ..utils.camera_side import CameraSideDetector
+from ..utils.filters import WorldLandmarkSmoother
 from .pose_service import PoseService
 from .rep_counter import RepCounter
 from .rep_judge import RepJudge
@@ -22,59 +30,78 @@ from .video_source import open_capture
 class FrameResult:
     """Everything computed for a single frame, handed to the renderer."""
 
-    def __init__(self, angles, states, results, views=None):
-        self.angles = angles
+    def __init__(self, angles, states, results, views=None, is_3d=True):
+        self.angles = angles  # Now 3D angles
         self.states = states
         self.results: list[ValidationResult] = results
-        # One ComputedAngle per rule (counter + validation) for the renderer.
         self.views: list[ComputedAngle] = views or []
+        self.is_3d = is_3d
 
 
 class GymEngine:
-    """Runs any exercise described by an :class:`Exercise` configuration.
-
-    GymEngine knows NOTHING about Push-Ups, Squats, or any specific movement.
-    Its single responsibility is the loop: detect pose -> compute the angles the
-    exercise asked for -> update the counter -> run the validation rules ->
-    forward everything to the renderer. Behaviour comes entirely from the
-    ``Exercise`` object passed in.
-
-    This is the Open/Closed Principle in practice: to support a new exercise you
-    add a new ``Exercise`` definition; you never modify this class.
+    """
+    Runs any exercise - NOW FULL 3D MODE.
+    
+    Analysis: 3D world landmarks (meters) -> true body angles, camera independent
+    Rendering: 2D image landmarks (pixels) -> skeleton drawn on screen
     """
 
-    def __init__(self, exercise: Exercise, colors: Colors | None = None, display_width: int = 1280):
+    def __init__(self, exercise: Exercise, colors: Colors | None = None, display_width: int = 1280, use_3d: bool | None = None, smooth: bool | None = None):
         self.exercise = exercise
         self.counter = RepCounter(exercise.counter_rules)
         self.judge = RepJudge()
         self.colors = colors or Colors()
-        # Optional maximum display width (e.g. DISPLAY_MAX_WIDTH). The frame is
-        # first auto-fit to the detected screen; this only caps it further.
         self.display_width = display_width
+        # If not specified, read from settings (.env) -> USE_3D, ENABLE_SMOOTHING
+        self.use_3d = use_3d if use_3d is not None else settings.USE_3D
+        self.smooth_enabled = smooth if smooth is not None else settings.ENABLE_SMOOTHING
+        
+        # 3D Smoother for world landmarks (reduces z jitter)
+        self.smoother = WorldLandmarkSmoother(min_cutoff=1.2, beta=0.02) if smooth else None
+        
         self.side_detector = CameraSideDetector(30) if exercise.camera == Camera.SIDE else None
         self.rules_adapted = False if exercise.camera == Camera.SIDE else True
-        # ── Distance-based form rules (exercise-agnostic) ──────────────
-        # Every DistanceValidationRule declared by the exercise participates:
-        # a violation of any of them poisons the repetition it occurs in.
-        # Exercises without distance rules get an empty set here and are
-        # completely unaffected by this machinery.
+        
         self._distance_rule_names = {
             r.name for r in exercise.validation_rules
             if isinstance(r, DistanceValidationRule)
         }
-        # Set when any distance rule fails; consumed when the rep completes.
         self._distance_violation_in_current_rep = False
-        # Failing results kept per rule name so the rep report can explain
-        # *why* (the rule may pass again by the frame the rep completes on).
         self._distance_violation_results = {}
 
     # ------------------------------------------------------------------
-    # Analysis: pure logic, no I/O -> easy to unit test with fake landmarks.
+    # Analysis: FULL 3D - pure logic, no I/O
     # ------------------------------------------------------------------
-    def analyze(self, landmarks, width: int, height: int, frame: int) -> FrameResult:
-        """Compute angles, update the counter, run validation, and judge reps."""
+    def analyze(self, image_landmarks, world_landmarks=None, width: int = 1000, height: int = 1000, frame: int = 0, timestamp_ms: int = None) -> FrameResult:
+        """
+        Compute 3D angles, update counter, run validation in 3D.
+        Backward compatible with old 2D signature: analyze(landmarks, width, height, frame)
+        
+        Args:
+            image_landmarks: 2D landmarks for rendering (x,y normalized) - or old single landmarks
+            world_landmarks: 3D world landmarks (x,y,z in meters) for analysis, or width in old API
+            width, height: frame dimensions for 2D projection
+            frame: frame number
+            timestamp_ms: timestamp for smoother
+        """
+        # Backward compatibility: old signature analyze(landmarks, width, height, frame)
+        if isinstance(world_landmarks, int):
+            # Shift args: world_landmarks is actually width
+            frame = height
+            height = width
+            width = world_landmarks
+            world_landmarks = None  # No world in old API, will fallback to 2D
+        
+        # If world_landmarks is actually a landmark list but is None for image, handle
+        if world_landmarks is None and image_landmarks is not None:
+            try:
+                if image_landmarks and hasattr(image_landmarks[0], 'z'):
+                    world_landmarks = image_landmarks
+            except (IndexError, AttributeError, TypeError):
+                pass
+        # Side detection still uses 2D visibility (most reliable)
         if self.side_detector and not self.rules_adapted:
-            side = self.side_detector.process_frame(landmarks)
+            side = self.side_detector.process_frame(image_landmarks)
             if side:
                 from ..utils.camera_side import adapt_rules
                 self.exercise.counter_rules = adapt_rules(self.exercise.counter_rules, side)
@@ -82,60 +109,88 @@ class GymEngine:
                 self.counter = RepCounter(self.exercise.counter_rules)
                 self.rules_adapted = True
             if not self.rules_adapted:
-                return FrameResult(angles={}, states=self.counter.states, results=[], views=[])
+                return FrameResult(angles={}, states=self.counter.states, results=[], views=[], is_3d=self.use_3d)
+
+        # Optional smoothing for world landmarks (critical for 3D stability)
+        if self.smoother and world_landmarks is not None:
+            world_landmarks = self.smoother.smooth(world_landmarks, timestamp_ms)
 
         angles = {}
-        views = []  # unified per-rule angle views for the renderer
+        views = []
 
+        # ---- 3D Rep Counting ----
         for rule in self.exercise.counter_rules:
-            pts = get_points(rule.joints, landmarks, width, height)
-            angle = calc_angle(*pts) if len(pts) >= 3 else None
+            angle = None
+            pts_2d = []
+            
+            # Primary: 3D angle from world landmarks
+            if self.use_3d and world_landmarks is not None:
+                pts_3d = get_points_3d(rule.joints, world_landmarks)
+                if len(pts_3d) >= 3:
+                    angle = calc_angle_3d(*pts_3d)
+            
+            # Fallback: 2D angle if 3D fails
+            pts_2d = get_points(rule.joints, image_landmarks, width, height)
+            if angle is None and len(pts_2d) >= 3:
+                angle = calc_angle(*pts_2d)
+            
             angles[rule.name] = angle
-            vertex = pts[1] if len(pts) >= 3 else (0, 0)
-            # Counter angles are never "failed" -> drawn with the highlight colour.
-            views.append(ComputedAngle(name=rule.name, vertex=vertex, angle=angle, is_error=False))
+            
+            # Vertex for drawing is ALWAYS 2D pixel (for screen)
+            vertex = pts_2d[1] if len(pts_2d) >= 3 else (0, 0)
+            views.append(ComputedAngle(name=rule.name, vertex=vertex, angle=angle, is_error=False, is_3d=self.use_3d))
 
-        results = validate_all(self.exercise.validation_rules, landmarks, width, height, states=self.counter.states)
+        # ---- 3D Validation ----
+        results = validate_all(
+            self.exercise.validation_rules, 
+            image_landmarks, 
+            world_landmarks, 
+            width, height, 
+            states=self.counter.states,
+            use_3d=self.use_3d
+        )
 
+        # Views for validation results (vertex from 2D for rendering)
         for res in results:
-            pts = get_points(res.joints, landmarks, width, height)
+            pts = get_points(res.joints, image_landmarks, width, height)
             vertex = pts[1] if len(pts) >= 3 else (0, 0)
             views.append(
-                ComputedAngle(name=res.rule_name, vertex=vertex, angle=res.angle, is_error=not res.passed)
+                ComputedAngle(name=res.rule_name, vertex=vertex, angle=res.angle, is_error=not res.passed, is_3d=res.is_3d)
             )
 
-        # ── Rep quality tracking ───────────────────────────────────────
-        # RepCounter owns counting AND quality (good/bad) decisions.
-        # Pass violation_names (set of failing rule names) — not a single global
-        # bool — so each counter rule only accumulates violations for its own joints.
-        violation_names = {r.rule_name for r in violations(results)}
+        # ---- Rep quality tracking ----
+        # RepJudge collects failures and complete evaluations
+        # Observe must be called every frame to collect violations for reporting
+        # This collects ALL failures (ERROR, WARNING, INFO) for score calculation
+        self.judge.observe(results, frame)
+
+        # For GOOD/BAD classification, only ERROR should make BAD
+        # WARNING/INFO only reduce score but rep remains GOOD (as per docs and desired behavior)
+        # So we split violations: all for scoring, ERROR-only for counting as BAD
+        all_violation_names = {r.rule_name for r in violations(results)}
+        error_violation_names = {r.rule_name for r in results if not r.passed and r.severity == Severity.ERROR}
+        
+        # For distance tracking, use all violations (distance rules are typically ERROR anyway)
+        violation_names_for_distance = all_violation_names
+        
+        # For counter BAD determination, use only ERROR (WARNING doesn't make BAD)
+        violation_names_for_counter = error_violation_names
+        
         prev_good  = self.counter.primary.good
         prev_count = self.counter.primary.count
 
-        # Preserve every rule outcome of this frame in the rep's complete
-        # evaluation record. Pure data collection for reporting — it does not
-        # affect classification or any other decision.
-        self.judge.record(results, frame)
+        # Record already called inside observe() above - evaluations tracked
 
-        # ── Distance-violation tracking (works for ANY exercise) ────────
-        # Accumulate: a distance failure at any point during the current rep
-        # marks the whole rep. The flag is only consumed (and cleared) when a
-        # rep completes below — never reset per-frame, so a violation at the
-        # top of a press still poisons the rep that is counted on the way down.
-        if self._distance_rule_names & violation_names:
+        if self._distance_rule_names & violation_names_for_distance:
             self._distance_violation_in_current_rep = True
             for r in results:
                 if not r.passed and r.rule_name in self._distance_rule_names:
                     self._distance_violation_results[r.rule_name] = r
 
-        self.counter.update(angles, violation_names)
+        self.counter.update(angles, violation_names_for_counter)
 
         if self.counter.primary.count > prev_count:
-            # Rep just completed - check if there was a distance violation
             if self._distance_violation_in_current_rep:
-                # Hand the stored failing result(s) to the judge so the
-                # session report explains *why* this rep is bad, then force
-                # the rep to be bad.
                 self.judge.observe(
                     list(self._distance_violation_results.values()), frame,
                 )
@@ -149,7 +204,6 @@ class GymEngine:
             else:
                 rep_was_good = self.counter.primary.good > prev_good
                 if self.counter.primary.speed_warning:
-                    # Inject a speed violation warning
                     from ..exercises.validation import ValidationResult
                     self.judge.observe([
                         ValidationResult(
@@ -157,7 +211,8 @@ class GymEngine:
                             message="Too fast — control the movement",
                             severity=Severity.WARNING,
                             passed=False,
-                            angle=None
+                            angle=None,
+                            is_3d=self.use_3d
                         )
                     ], frame)
                 self.judge.finalize_rep(
@@ -167,21 +222,21 @@ class GymEngine:
                 )
 
         return FrameResult(
-            angles=angles, states=self.counter.states, results=results, views=views
+            angles=angles, states=self.counter.states, results=results, views=views, is_3d=self.use_3d
         )
 
     # ------------------------------------------------------------------
-    # Rendering: draws whatever the Exercise configuration describes.
+    # Rendering: ALWAYS 2D - draws on image
     # ------------------------------------------------------------------
-    def _render(self, frame, result: FrameResult, landmarks, width: int, height: int):
+    def _render(self, frame, result: FrameResult, image_landmarks, width: int, height: int):
+        """Rendering is ALWAYS 2D - draws skeleton on frame."""
         bad = bool(violations(result.results))
         show = self.exercise.display
 
-        # Skeleton for every joint set the exercise cares about.
         if show.show_skeleton:
             drawn_joints = set()
             for rule in self.exercise.counter_rules:
-                pts = get_points(rule.joints, landmarks, width, height)
+                pts = get_points(rule.joints, image_landmarks, width, height)
                 if len(pts) >= 3:
                     custom_color = None
                     if bad:
@@ -189,46 +244,34 @@ class GymEngine:
                     elif hasattr(rule, 'min_rom_angle') and rule.min_rom_angle is not None:
                         state = self.counter.states.get(rule.name)
                         if state is not None:
-                            # Only show RED/GREEN feedback when actively in a rep
-                            # (DOWN or RETURNING stage). At UP/rest, use default color.
                             if state.stage in (rule.up_stage,):
-                                custom_color = None  # resting — default white
+                                custom_color = None
                             elif state.reached_bottom:
-                                custom_color = self.colors.HIGHLIGHT   # GREEN — depth reached
+                                custom_color = self.colors.HIGHLIGHT
                             else:
-                                custom_color = self.colors.ERROR        # RED — need to go deeper
+                                custom_color = self.colors.ERROR
                     draw_skeleton(frame, pts, self.colors, is_bad=bad, custom_color=custom_color)
                     drawn_joints.add(tuple(sorted(rule.joints)))
 
-            # Validation-rule skeletons (e.g. back angle for deadlift).
-            # Can be suppressed per-exercise via DisplaySettings.show_validation_skeleton.
             if show.show_validation_skeleton:
                 for rule in self.exercise.validation_rules:
-                    # Only draw skeletons for rules with joints attribute (AngleValidationRule)
                     if hasattr(rule, 'joints'):
                         joints_key = tuple(sorted(rule.joints))
                         if joints_key not in drawn_joints:
-                            pts = get_points(rule.joints, landmarks, width, height)
+                            pts = get_points(rule.joints, image_landmarks, width, height)
                             if len(pts) >= 3:
                                 draw_skeleton(frame, pts, self.colors, is_bad=bad)
                                 drawn_joints.add(joints_key)
 
-        # Live angle arcs for each counter rule (visual only; the numeric
-        # value is drawn by draw_angle_labels for EVERY computed angle).
         if show.show_angle_arc:
             for rule in self.exercise.counter_rules:
-                pts = get_points(rule.joints, landmarks, width, height)
+                pts = get_points(rule.joints, image_landmarks, width, height)
                 if len(pts) >= 3:
                     draw_angle_arc(frame, pts[0], pts[1], pts[2], self.colors, is_bad=bad)
 
-        # Floating angle label for EVERY computed angle (counter + validation),
-        # positioned at the rule's vertex joint. Fully automatic & rule-agnostic.
+        # Labels show 3D angles but positioned at 2D vertices
         draw_angle_labels(frame, result.views, self.colors, width, height)
 
-        # Declarative landmark-to-landmark segment lines (e.g. the wrist line
-        # at the top of a shoulder press). Driven entirely by
-        # DisplaySettings.segment_lines — the engine knows nothing about
-        # which exercise configured them.
         for seg in show.segment_lines:
             active = all(
                 (result.angles.get(name) or 0.0) >= seg.min_angle
@@ -241,13 +284,10 @@ class GymEngine:
                 for r in result.results
             )
             line_color = self.colors.ERROR if failed else self.colors.HIGHLIGHT
-            pts = get_points(seg.endpoints, landmarks, width, height)
+            pts = get_points(seg.endpoints, image_landmarks, width, height)
             if len(pts) == 2:
                 draw_segment_line(frame, pts[0], pts[1], self.colors, line_color)
 
-        # Stats / coaching panel: a fixed bottom-left overlay (not anchored to
-        # any body landmark). Layout lives in utils/render.py. Rep-quality
-        # figures come from RepJudge (history is the single source of truth).
         primary = self.counter.primary
         issues = violations(result.results)
         feedback = [r.message for r in issues]
@@ -278,17 +318,10 @@ class GymEngine:
             colors=self.colors,
         )
 
-    # ------------------------------------------------------------------
-    # Session analytics + export (orchestration only — no logic here).
-    # ------------------------------------------------------------------
     def _export_session(self, report: "SessionReport") -> None:
-        """Persist the complete session ``report`` as JSON (opt-in)."""
         from ..analytics.exporters import JsonSessionExporter
 
         if settings.EXPORT_FORMAT.lower() != "json":
-            # CSV export was removed: a complete session history is nested
-            # data and cannot be flattened without losing information. The
-            # report is always written as JSON.
             print(
                 f"EXPORT_FORMAT '{settings.EXPORT_FORMAT}' is no longer supported"
                 " for session reports — writing JSON instead."
@@ -302,20 +335,16 @@ class GymEngine:
         print(f"Session report exported to {out_path}")
 
     # ------------------------------------------------------------------
-    # Orchestration: video source + detection + render loop.
+    # Orchestration: video source + 3D detection + 2D render loop
     # ------------------------------------------------------------------
     def run(self, video_path: str | None = None):
-        # Source acquisition + failure diagnostics live in video_source, so the
-        # CLI, the engine and the live server all produce identical, actionable
-        # errors (which path was tried, what assets/videos actually contains).
         cap = open_capture(
             video_path=video_path or settings.VIDEO_PATH,
             use_webcam=settings.USE_WEBCAM,
             webcam_index=settings.WEBCAM_INDEX,
         )
 
-        fps = 25  # fixed for deterministic timestamps
-
+        fps = 25
         writer = None
         if settings.SAVE_OUTPUT:
             settings.OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -328,6 +357,11 @@ class GymEngine:
         start_time = time.perf_counter()
         frame_id = 0
 
+        print(f"=== AI Gym Trainer - {'3D' if self.use_3d else '2D'} MODE - {self.exercise.name} ===")
+        print(f"3D Calculation: {'ENABLED' if self.use_3d else 'DISABLED (2D fallback)'}")
+        print(f"Smoothing: {'ENABLED' if self.smooth_enabled and self.use_3d else 'DISABLED'}")
+        print(f"Rendering: 2D (always)")
+
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -336,33 +370,56 @@ class GymEngine:
             h, w = frame.shape[:2]
             timestamp = int((frame_id / fps) * 1000)
 
-            result = pose_service.detect(frame, timestamp)
+            detection = pose_service.detect(frame, timestamp)
 
-            if result and result.pose_landmarks:
-                lm = result.pose_landmarks[0]
-                frame_result = self.analyze(lm, w, h, frame_id)
-                self._render(frame, frame_result, lm, w, h)
+            if detection and detection.pose_landmarks:
+                # 3D analysis + 2D rendering
+                frame_result = self.analyze(
+                    detection.pose_landmarks, 
+                    detection.world_landmarks,
+                    w, h, frame_id, timestamp
+                )
+                self._render(frame, frame_result, detection.pose_landmarks, w, h)
 
             if writer:
                 writer.write(frame)
 
-            # Display-only resize: pose math + saved output use the original frame.
-            frame = fit_to_screen(frame, max_width=self.display_width)
-            cv2.imshow("AI Gym Trainer", frame)
-
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+            # Display handling - supports headless (Ubuntu server, WSL, Docker)
+            # If running on machine without GUI, skip imshow gracefully
+            try:
+                display_frame = fit_to_screen(frame, max_width=self.display_width)
+                # Check if we can actually show window
+                if hasattr(cv2, 'imshow'):
+                    cv2.imshow(f"AI Gym Trainer 3D - {self.exercise.name}", display_frame)
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        print("Stopped by user (q)")
+                        break
+                else:
+                    # Headless opencv - just print progress
+                    if frame_id % 30 == 0:
+                        print(f"Processing frame {frame_id} | Reps: {self.judge.total_reps} | Angle: {self.counter.primary.angle}")
+            except cv2.error as e:
+                # Headless mode - opencv_python_headless doesn't support imshow
+                # Continue processing without display, video will still be saved if SAVE_OUTPUT=true
+                if "not implemented" in str(e).lower() or "gtk" in str(e).lower() or "cocoa" in str(e).lower():
+                    if frame_id == 0:
+                        print("⚠️  Headless mode detected (no display available).")
+                        print("   Processing without preview window...")
+                        print("   - Video will be processed and report exported")
+                        print("   - If SAVE_OUTPUT=true, annotated video saved to output/videos/")
+                        print("   - Press Ctrl+C to stop")
+                    if frame_id % 60 == 0:
+                        primary = self.counter.primary
+                        print(f"Frame {frame_id} | Reps: {self.judge.total_reps} (Good:{self.judge.good_reps} Bad:{self.judge.bad_reps}) | Stage: {primary.stage} | Angle: {primary.angle}")
+                else:
+                    raise
 
             frame_id += 1
 
-        # ── Session report (built entirely from RepJudge.history) ─────
-        # GymEngine only supplies engine-level context (exercise, source,
-        # frames, time); all rep-quality figures are derived by RepJudge so no
-        # state is duplicated here.
         elapsed = time.perf_counter() - start_time
         frames_processed = frame_id
         if settings.USE_WEBCAM:
-            input_source = f"Webcam (index {settings.WEBCAM_INDEX})"
+            input_source = f"Webcam (index {settings.WEBCAM_INDEX}) {'3D' if self.use_3d else '2D'}"
         else:
             src = video_path or settings.VIDEO_PATH
             input_source = str(src) if src is not None else "none"
@@ -374,15 +431,7 @@ class GymEngine:
             elapsed_seconds=elapsed,
         ))
 
-        # ── Session analytics + optional export ──────────────────────
-        # GymEngine only *orchestrates*: it hands the finished session
-        # (RepJudge.history + the exercise it ran) to the analytics module
-        # and, if enabled, asks an exporter to persist the resulting
-        # SessionReport. No analytics logic lives in the engine.
         if settings.EXPORT_SESSION:
-            # Imported lazily (like the exporters) so analytics stays an
-            # optional, one-way dependency of the engine and import cycles
-            # with the services package are avoided.
             from ..analytics.analyzer import SessionAnalyzer
 
             report = SessionAnalyzer().build_report(
@@ -393,8 +442,12 @@ class GymEngine:
             )
             self._export_session(report)
 
+        print(f"\n{'3D' if self.use_3d else '2D'} Metrics: {self.judge.total_reps} total, {self.judge.good_reps} good, {self.judge.bad_reps} bad")
         print(self.judge.history)
         cap.release()
         if writer:
             writer.release()
-        cv2.destroyAllWindows()
+        try:
+            cv2.destroyAllWindows()
+        except cv2.error:
+            pass  # Headless - ignore

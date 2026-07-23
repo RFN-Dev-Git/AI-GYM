@@ -1,14 +1,22 @@
-# Videos are ignored, but the directory itself is kept in Git via .gitkeep.
+# Videos
 /assets/videos/*
-!assets/videos/.gitkeep
+!/assets/videos/.gitkeep
 
-/assets/models/*
-!assets/models/.gitkeep
-output/
+# Models
+# /assets/models/*
+!/assets/models/.gitkeep
+
+# Other directories
 sessions/
 uploads/
-Media Pipe Pose Tutorial.ipynb
+
 playground.ipynb
+
+# Output
+/output/**
+!/output/**/
+!/output/**/.gitkeep
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -26,7 +34,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/
 lib64/
 parts/
 sdist/
@@ -231,3 +239,7 @@ __marimo__/
 
 output/
 videos/
+
+# Arena global config - do not commit
+.gitconfig
+.vite

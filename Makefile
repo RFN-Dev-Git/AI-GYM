@@ -9,13 +9,16 @@ VIDEO ?= hackw.mp4
 # pose model at MODEL_PATH (backend/.env). Relative paths in .env resolve
 # against the repository root.
 run:
-	cd backend && uv run python -m src.main $(EXERCISE) $(VIDEO)
+	clear
+	cd backend && uv run python -m src.main $(EXERCISE) assets/videos/$(VIDEO)
 
 # ── Full stack (web app: uploads + live coaching over WebSocket) ───────────
 backend:    ## API + WebSocket server on :8000  (the React app talks to this)
+	clear
 	cd backend && uv run uvicorn src.server.app:app --reload --port 8000
 
 frontend:   ## Vite dev server on :5173 (proxies /api + /ws to :8000)
+	clear
 	cd frontend && npm run dev
 
 build:      ## frontend typecheck + production bundle (frontend/dist)
@@ -27,6 +30,10 @@ test:       ## all backend test suites
 	python tests/services/test_distance_handling.py && \
 	python tests/services/test_video_source.py && \
 	python tests/integration/test_architecture.py
+
+
+code:
+	./codex -ext .py
 
 help:
 	@echo "  run       - engine CLI:        make run EXERCISE=<name> VIDEO=<file|path>"

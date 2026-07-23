@@ -259,3 +259,27 @@ class DistanceValidationRule(ValidationRule):
     reference: LandmarkPair
     min_ratio: float
     max_ratio: float
+
+
+@dataclass(frozen=True, kw_only=True)
+class ShrugValidationRule(ValidationRule):
+    """A form check for shoulder shrugging during lateral raises.
+
+    *What it represents:* "keep your shoulders down — don't shrug your traps"
+    — detects when the shoulders are raised unevenly or excessively.
+
+    *What it measures:* the normalized difference in height between the left
+    and right shoulders. A large delta indicates shrugging or uneven shoulder
+    position.
+
+    *Why it exists:* lateral raises should isolate the lateral deltoids;
+    shrugging the traps shifts the work to the wrong muscles and is poor form.
+
+    *When it is satisfied:* whenever the normalized shoulder height delta
+    stays below the threshold.
+
+    Attributes:
+        threshold: Maximum acceptable normalized shoulder height difference.
+    """
+
+    threshold: float

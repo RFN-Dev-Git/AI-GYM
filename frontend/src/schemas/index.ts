@@ -146,6 +146,8 @@ export type SettingsPatch = Partial<{
   ANALYTICS_FPS: number;
   DISPLAY_MAX_WIDTH: number;
   EXPORT_SESSION: boolean;
+  USE_3D: boolean;
+  ENABLE_SMOOTHING: boolean;
 }>;
 
 // ── Uploads (web-app video workflow) ────────────────────────────────────────
@@ -164,6 +166,7 @@ export interface LiveRuleState {
   severity: string;
   message: string;
   value: number | null;
+  is_3d?: boolean;
 }
 
 export interface LiveState {
@@ -180,6 +183,7 @@ export interface LiveState {
   live_score: number | null;
   side: string | null;
   adapting: boolean;
+  is_3d?: boolean;
   feedback: string[];
   rules: LiveRuleState[];
 }
@@ -192,6 +196,7 @@ export interface LiveEnd {
   /** Filename of the rendered session video (when SAVE_OUTPUT is enabled). */
   rendered_video?: string;
   rendered_error?: string;
+  is_3d?: boolean;
 }
 
 export interface LiveError {
