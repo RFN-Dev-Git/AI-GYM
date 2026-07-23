@@ -1,0 +1,21 @@
+# Engine CLI cheat sheet — run these from backend/ (cd backend first),
+# or use `make run EXERCISE=<name> VIDEO=<file>` from the repo root.
+# ('c' = webcam, 's' = save the rendered output to output/videos/)
+
+python -m src.main biceps_curl c
+# Run biceps curl using your laptop webcam (without saving).
+
+python -m src.main biceps_curl c s
+# Run biceps curl using your laptop webcam and save the recorded output stream.
+
+python -m src.main biceps_curl biw2.mp4
+# Play a video file (without saving).
+
+python -m src.main biceps_curl biw2.mp4 s
+# Play a video file and save the output stream.
+
+python -m src.main biceps_curl c → Run biceps curl using your laptop webcam (without saving).
+
+python -m src.main biceps_curl c s → Run biceps curl using your laptop webcam and save the recorded output stream.
+python -m src.main biceps_curl biw2.mp4 → Play a video file (without saving).
+python -m src.main biceps_curl biw2.mp4 s → Play a video file and save the output stream.
