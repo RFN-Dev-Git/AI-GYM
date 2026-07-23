@@ -1,18 +1,35 @@
+# Git & editor junk
 .git
-.env
+.gitignore
+.vscode
+.idea
+
+# Python caches
 __pycache__
 *.pyc
 *.pyo
 *.pyd
 .pytest_cache
-.vscode
-.idea
-frontend/
+
+# Environment files (injected at runtime via docker-compose)
+.env
+
+# Generated output / uploads (mounted as volumes)
 output/
 uploads/
+
+# Frontend source (handled by separate frontend Dockerfile)
+frontend/
+
+# Dev venvs
 backend/.venv
 backend/venv
 backend/tests/
+
+# Large binary/media files not needed in image
 *.mp4
 *.zip
+
+# Windows scripts
 *.bat
+*.md

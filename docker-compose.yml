@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  # ── Backend: FastAPI + MediaPipe pose analysis API ──────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gym-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist session outputs and uploads across container restarts
+      - ./output:/app/output
+      - ./uploads:/app/uploads
+    environment:
+      - MODEL_PATH=assets/models/pose_landmarker_full.task
+      - EXPORT_SESSION=true
+      - EXPORT_FORMAT=json
+      - EXPORT_DIR=output/sessions
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # ── Frontend: React + Vite dev server ───────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gym-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      # Points the Vite proxy to the backend service inside Docker network
+      - VITE_API_TARGET=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  default:
+    name: gym-network
