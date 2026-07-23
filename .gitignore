@@ -231,3 +231,5 @@ __marimo__/
 
 output/
 videos/
+
+docker_setup_guide.md
