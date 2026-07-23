@@ -77,6 +77,8 @@ export interface Repetition {
   start_frame: number | null;
   end_frame: number | null;
   duration_seconds: number | null;
+  start_time: number | null;
+  end_time: number | null;
   evaluations: RepEvaluation[];
 }
 

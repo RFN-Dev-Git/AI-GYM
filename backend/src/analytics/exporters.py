@@ -210,6 +210,8 @@ class JsonSessionExporter:
             "score": round(rep.score, 1),
             "start_frame": rep.start_frame,
             "end_frame": rep.end_frame,
+            "start_time": round(rep.start_time, 2) if getattr(rep, 'start_time', None) is not None else None,
+            "end_time": round(rep.end_time, 2) if getattr(rep, 'end_time', None) is not None else None,
             "duration_seconds": (
                 round(rep.duration_seconds, 2)
                 if rep.duration_seconds is not None else None

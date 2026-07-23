@@ -245,6 +245,8 @@ class RepetitionRecord:
         end_frame:        Frame the rep completed on, or ``None``.
         duration_seconds: ``(end_frame - start_frame + 1) / fps``, or
                           ``None`` when frame bounds are unavailable.
+        start_time:       Start time in seconds from session start (start_frame / fps)
+        end_time:         End time in seconds from session start (end_frame / fps)
         evaluations:      Complete per-rule decision record (pass and fail),
                           referencing session-level rule definitions by name.
     """
@@ -256,6 +258,8 @@ class RepetitionRecord:
     start_frame: Optional[int] = None
     end_frame: Optional[int] = None
     duration_seconds: Optional[float] = None
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
     evaluations: Tuple[RuleEvaluationRecord, ...] = ()
 
     @property

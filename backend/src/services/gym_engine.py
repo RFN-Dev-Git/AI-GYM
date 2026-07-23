@@ -297,6 +297,7 @@ class GymEngine:
             else "BAD" if last is not None
             else "—"
         )
+        # Fix stage display: show UP/DOWN only, not Stage.UP
         display_stage = primary.stage
         if self.exercise.counter_rules:
             rule = self.exercise.counter_rules[0]
@@ -304,6 +305,20 @@ class GymEngine:
                 display_stage = rule.up_stage
             elif primary.stage == Stage.DOWN:
                 display_stage = rule.down_stage
+            elif primary.stage == Stage.RETURNING:
+                display_stage = "RETURNING"
+        
+        # Convert enum to clean string value (UP/DOWN) - fixes "stage.UP" bug
+        if hasattr(display_stage, 'value'):
+            display_stage = display_stage.value
+        # Clean up and uppercase for display - show UP/DOWN only
+        display_stage_str = str(display_stage).upper()
+        # Handle custom stage names like "open"/"close" - keep as is but uppercase
+        if display_stage_str.lower() in ("up", "down", "returning"):
+            display_stage_str = display_stage_str.upper()
+        else:
+            # For custom labels like "open", show as Title case
+            display_stage_str = str(display_stage).replace("_", " ").title()
 
         draw_stats(
             frame,
@@ -312,7 +327,7 @@ class GymEngine:
             good_reps=self.judge.good_reps,
             bad_reps=self.judge.bad_reps,
             current_rep=current_rep,
-            stage=display_stage,
+            stage=display_stage_str,
             angle=primary.angle,
             feedback=feedback,
             colors=self.colors,
@@ -344,7 +359,19 @@ class GymEngine:
             webcam_index=settings.WEBCAM_INDEX,
         )
 
-        fps = 25
+        # --- Dynamic FPS detection (fixes hardcoded 25) ---
+        # For video files: use actual video FPS (30, 60, 24, etc.)
+        # For webcam: FPS may be 0, fallback to ANALYTICS_FPS and measure live
+        import math
+        detected_fps = cap.get(cv2.CAP_PROP_FPS)
+        if detected_fps is None or detected_fps <= 0 or detected_fps > 120 or math.isnan(detected_fps):
+            # Webcam or video with unknown FPS - use fallback and will measure
+            detected_fps = settings.ANALYTICS_FPS
+            print(f"⚠️  Video FPS not detectable, using fallback {detected_fps} fps (will measure live FPS)")
+        else:
+            print(f"📹 Detected video FPS: {detected_fps:.2f}")
+
+        fps = detected_fps
         writer = None
         if settings.SAVE_OUTPUT:
             settings.OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -356,11 +383,16 @@ class GymEngine:
         pose_service = PoseService(settings.MODEL_PATH)
         start_time = time.perf_counter()
         frame_id = 0
+        # For webcam live FPS measurement
+        live_fps = fps
+        frames_tick = 0
+        last_fps_check = start_time
 
         print(f"=== AI Gym Trainer - {'3D' if self.use_3d else '2D'} MODE - {self.exercise.name} ===")
         print(f"3D Calculation: {'ENABLED' if self.use_3d else 'DISABLED (2D fallback)'}")
         print(f"Smoothing: {'ENABLED' if self.smooth_enabled and self.use_3d else 'DISABLED'}")
         print(f"Rendering: 2D (always)")
+        print(f"Using FPS: {fps:.2f} ( {'video file' if not settings.USE_WEBCAM else 'webcam fallback, measuring live'} )")
 
         while True:
             ret, frame = cap.read()
@@ -368,6 +400,7 @@ class GymEngine:
                 break
 
             h, w = frame.shape[:2]
+            # Use detected fps for timestamp - accurate timing
             timestamp = int((frame_id / fps) * 1000)
 
             detection = pose_service.detect(frame, timestamp)
@@ -385,44 +418,54 @@ class GymEngine:
                 writer.write(frame)
 
             # Display handling - supports headless (Ubuntu server, WSL, Docker)
-            # If running on machine without GUI, skip imshow gracefully
             try:
                 display_frame = fit_to_screen(frame, max_width=self.display_width)
-                # Check if we can actually show window
                 if hasattr(cv2, 'imshow'):
-                    cv2.imshow(f"AI Gym Trainer 3D - {self.exercise.name}", display_frame)
+                    cv2.imshow(f"AI Gym Trainer {'3D' if self.use_3d else '2D'} - {self.exercise.name} ({fps:.1f}fps)", display_frame)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         print("Stopped by user (q)")
                         break
                 else:
-                    # Headless opencv - just print progress
                     if frame_id % 30 == 0:
-                        print(f"Processing frame {frame_id} | Reps: {self.judge.total_reps} | Angle: {self.counter.primary.angle}")
+                        print(f"Processing frame {frame_id} | Reps: {self.judge.total_reps} | Angle: {self.counter.primary.angle} | FPS: {live_fps:.1f}")
             except cv2.error as e:
-                # Headless mode - opencv_python_headless doesn't support imshow
-                # Continue processing without display, video will still be saved if SAVE_OUTPUT=true
                 if "not implemented" in str(e).lower() or "gtk" in str(e).lower() or "cocoa" in str(e).lower():
                     if frame_id == 0:
                         print("⚠️  Headless mode detected (no display available).")
                         print("   Processing without preview window...")
                         print("   - Video will be processed and report exported")
+                        print(f"   - FPS: {fps:.2f} detected")
                         print("   - If SAVE_OUTPUT=true, annotated video saved to output/videos/")
                         print("   - Press Ctrl+C to stop")
                     if frame_id % 60 == 0:
                         primary = self.counter.primary
-                        print(f"Frame {frame_id} | Reps: {self.judge.total_reps} (Good:{self.judge.good_reps} Bad:{self.judge.bad_reps}) | Stage: {primary.stage} | Angle: {primary.angle}")
+                        print(f"Frame {frame_id} | Reps: {self.judge.total_reps} (Good:{self.judge.good_reps} Bad:{self.judge.bad_reps}) | Stage: {primary.stage} | Angle: {primary.angle} | FPS: {live_fps:.1f}")
                 else:
                     raise
 
+            # Live FPS measurement for webcam (updates every second)
             frame_id += 1
+            frames_tick += 1
+            now = time.perf_counter()
+            if now - last_fps_check >= 1.0:
+                live_fps = frames_tick / (now - last_fps_check)
+                frames_tick = 0
+                last_fps_check = now
+                # Update fps for timestamp if measuring live webcam and initial fps was fallback
+                if settings.USE_WEBCAM and detected_fps == settings.ANALYTICS_FPS:
+                    # Smoothly adapt to measured fps
+                    fps = (fps * 0.7 + live_fps * 0.3) if live_fps > 0 else fps
 
         elapsed = time.perf_counter() - start_time
         frames_processed = frame_id
+        # Use measured live_fps for final report if webcam, otherwise detected fps
+        final_fps = live_fps if settings.USE_WEBCAM and live_fps > 0 else fps
+        
         if settings.USE_WEBCAM:
-            input_source = f"Webcam (index {settings.WEBCAM_INDEX}) {'3D' if self.use_3d else '2D'}"
+            input_source = f"Webcam (index {settings.WEBCAM_INDEX}) {'3D' if self.use_3d else '2D'} @ {final_fps:.1f}fps"
         else:
             src = video_path or settings.VIDEO_PATH
-            input_source = str(src) if src is not None else "none"
+            input_source = f"{str(src) if src is not None else 'none'} @ {final_fps:.1f}fps"
 
         print(self.judge.session_report(
             exercise_name=self.exercise.name,
@@ -437,12 +480,12 @@ class GymEngine:
             report = SessionAnalyzer().build_report(
                 self.judge.history,
                 exercise=self.exercise,
-                fps=settings.ANALYTICS_FPS,
+                fps=final_fps,
                 total_duration=elapsed,
             )
             self._export_session(report)
 
-        print(f"\n{'3D' if self.use_3d else '2D'} Metrics: {self.judge.total_reps} total, {self.judge.good_reps} good, {self.judge.bad_reps} bad")
+        print(f"\n{'3D' if self.use_3d else '2D'} Metrics: {self.judge.total_reps} total, {self.judge.good_reps} good, {self.judge.bad_reps} bad @ {final_fps:.1f}fps")
         print(self.judge.history)
         cap.release()
         if writer:

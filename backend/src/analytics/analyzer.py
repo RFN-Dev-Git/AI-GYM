@@ -21,7 +21,7 @@ from typing import Dict, Mapping, Optional, Sequence, Tuple
 from ..exercises.exercise import Exercise
 from ..exercises.rules import (
     AngleROMValidationRule, AngleValidationRule, DistanceValidationRule,
-    Severity, ValidationRule,
+    ShrugValidationRule, Severity, ValidationRule,
 )
 from ..exercises.validation import ValidationResult
 from ..services.rep_judge import RepResult
@@ -44,6 +44,7 @@ DEFAULT_SEVERITY_WEIGHTS: Dict[str, float] = {
 _KIND_ANGLE = "angle"
 _KIND_ROM = "range_of_motion"
 _KIND_DISTANCE = "distance"
+_KIND_SHRUG = "shrug"
 _KIND_COUNTER = "counter"
 
 # Value-unit labels used in RuleEvaluationRecord.value_unit.
@@ -373,7 +374,12 @@ class SessionAnalyzer:
         static_messages: Mapping[str, str],
         managed: bool,
     ) -> RepetitionRecord:
-        """One completed rep -> its full report record."""
+        """One completed rep -> its full report record.
+        
+        Now includes both frame numbers AND time in seconds for easier use.
+        start_time = start_frame / fps (seconds from session start)
+        end_time = end_frame / fps (seconds from session start)
+        """
         return RepetitionRecord(
             number=rep.number,
             good=rep.good,
@@ -382,11 +388,20 @@ class SessionAnalyzer:
             start_frame=rep.start_frame,
             end_frame=rep.end_frame,
             duration_seconds=self._rep_duration(rep, fps),
+            start_time=self._frame_to_time(rep.start_frame, fps),
+            end_time=self._frame_to_time(rep.end_frame, fps),
             evaluations=tuple(
                 self._evaluation_record(outcome, static_messages)
                 for outcome in rep.evaluations
             ),
         )
+
+    @staticmethod
+    def _frame_to_time(frame: Optional[int], fps: float) -> Optional[float]:
+        """Convert frame number to time in seconds from session start."""
+        if frame is None:
+            return None
+        return frame / float(fps)
 
     @staticmethod
     def _judged_by(rep: RepResult, managed: bool) -> str:
@@ -473,4 +488,6 @@ def _rule_expectations(
         return _KIND_DISTANCE, rule.min_ratio, rule.max_ratio, _UNIT_RATIO
     if isinstance(rule, AngleValidationRule):
         return _KIND_ANGLE, rule.min_angle, rule.max_angle, _UNIT_DEGREES
+    if isinstance(rule, ShrugValidationRule):
+        return _KIND_SHRUG, 0.0, rule.threshold, _UNIT_RATIO
     return _KIND_COUNTER, None, None, None

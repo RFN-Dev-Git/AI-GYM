@@ -182,7 +182,7 @@ export function ReportPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{exercise.name}</h1>
           <p className="text-sm text-muted-foreground">
-            {formatDate(session?.recorded_at ?? null)} · {exercise.muscle_groups.join(", ")} · {exercise.camera === "side" ? "side view" : "front view"}
+            {formatDate(session?.recorded_at ?? null)} · {exercise.muscle_groups.join(", ")} · {exercise.camera === "side" ? "side view" : exercise.camera === "front" ? "front view" : exercise.camera === "both" ? "front view" : `${exercise.camera} view`}
           </p>
         </div>
         <Tooltip>
@@ -379,8 +379,9 @@ export function ReportPage() {
                   >
                     <div className="rounded-xl border border-border/60 bg-card/60 p-4">
                       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                        <span>Frames <strong className="text-foreground">{rep.start_frame ?? "—"} → {rep.end_frame ?? "—"}</strong></span>
+                        <span>Time <strong className="text-foreground">{rep.start_time != null ? formatSeconds(rep.start_time) : "—"} → {rep.end_time != null ? formatSeconds(rep.end_time) : "—"}</strong></span>
                         <span>Duration <strong className="text-foreground">{formatSeconds(rep.duration_seconds)}</strong></span>
+                        <span>Frames <strong className="text-foreground">{rep.start_frame ?? "—"} → {rep.end_frame ?? "—"}</strong></span>
                         <span>Checks <strong className="text-foreground">{rep.evaluations.length}</strong></span>
                         <span>Failed <strong className={failed.length ? "text-destructive" : "text-foreground"}>{failed.length}</strong></span>
                       </div>

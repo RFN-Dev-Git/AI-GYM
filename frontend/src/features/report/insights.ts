@@ -390,19 +390,31 @@ export interface TimelineModel {
  * Convert rep frame numbers to seconds and lay reps + rest gaps along the
  * session duration. Returns null when the export lacks frame timing (older
  * files or missing fps) so the UI can downgrade gracefully.
+ * Now prefers start_time/end_time if available (new 3D reports), fallback to frames.
  */
 export function buildTimeline(
   history: Repetition[],
   fps: number | null | undefined,
   totalDuration: number | null | undefined,
 ): TimelineModel | null {
-  if (!fps || fps <= 0) return null;
-  if (history.some((r) => r.start_frame == null || r.end_frame == null)) return null;
+  if (history.length === 0) return null;
+  const hasTime = history.some((r) => r.start_time != null && r.end_time != null);
+  if (!hasTime && (!fps || fps <= 0)) return null;
+  if (!hasTime && history.some((r) => r.start_frame == null || r.end_frame == null)) return null;
   const segments: TimelineSegment[] = [];
   let cursor = 0;
   for (const rep of history) {
-    const start = rep.start_frame! / fps;
-    const end = Math.max(rep.end_frame! / fps, start);
+    let start: number;
+    let end: number;
+    if (rep.start_time != null && rep.end_time != null) {
+      start = rep.start_time;
+      end = Math.max(rep.end_time, start);
+    } else if (rep.start_frame != null && rep.end_frame != null && fps) {
+      start = rep.start_frame / fps;
+      end = Math.max(rep.end_frame / fps, start);
+    } else {
+      continue;
+    }
     if (start - cursor > 0.05) {
       segments.push({ kind: "gap", span: 0, start: cursor, end: start });
     }

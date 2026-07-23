@@ -124,6 +124,14 @@ class LiveSession(threading.Thread):
         writer = None
         rendered_name: Optional[str] = None
         rendered_error: Optional[str] = None
+
+        # --- Dynamic FPS detection ---
+        import math
+        detected_fps = cap.get(cv2.CAP_PROP_FPS)
+        if detected_fps is None or detected_fps <= 0 or detected_fps > 120 or math.isnan(detected_fps):
+            detected_fps = settings.ANALYTICS_FPS  # fallback, will be updated by live measurement
+        fps_for_writer = detected_fps
+
         if settings.SAVE_OUTPUT:
             try:
                 RENDERED_DIR.mkdir(parents=True, exist_ok=True)
@@ -131,7 +139,7 @@ class LiveSession(threading.Thread):
                 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-                writer = cv2.VideoWriter(str(RENDERED_DIR / rendered_name), fourcc, 25.0, (width, height))
+                writer = cv2.VideoWriter(str(RENDERED_DIR / rendered_name), fourcc, fps_for_writer, (width, height))
                 if not writer.isOpened():
                     writer.release()
                     writer, rendered_name = None, None
@@ -150,12 +158,12 @@ class LiveSession(threading.Thread):
             self._publish({"type": "error", "message": f"Pose model unavailable: {exc}"})
             return
 
-        fps = 25.0
+        fps = detected_fps
         results: List = []
         frame_id, frames_tick = 0, 0
         start = time.perf_counter()
         last_fps_check = start
-        live_fps = 0.0
+        live_fps = fps  # start with detected, will be measured
 
         while not self._stop.is_set():
             ok, frame = cap.read()
@@ -189,7 +197,12 @@ class LiveSession(threading.Thread):
             frames_tick += 1
             now = time.perf_counter()
             if now - last_fps_check >= 1.0:
-                live_fps = frames_tick / (now - last_fps_check)
+                measured = frames_tick / (now - last_fps_check)
+                if measured > 0:
+                    live_fps = measured
+                    # Adapt fps for timestamp calculation if we were using fallback
+                    if detected_fps == settings.ANALYTICS_FPS:
+                        fps = (fps * 0.7 + live_fps * 0.3)
                 frames_tick, last_fps_check = 0, now
 
         cap.release()
@@ -197,7 +210,9 @@ class LiveSession(threading.Thread):
             writer.release()
 
         elapsed = time.perf_counter() - start
-        ended: Dict[str, Any] = {"type": "end", "reps": engine.judge.total_reps, "is_3d": engine.use_3d}
+        # Use final measured fps for report if available
+        final_fps = live_fps if live_fps > 0 else fps
+        ended: Dict[str, Any] = {"type": "end", "reps": engine.judge.total_reps, "is_3d": engine.use_3d, "fps": round(final_fps, 1)}
         if rendered_name is not None:
             ended["rendered_video"] = rendered_name
         if rendered_error is not None:
@@ -209,7 +224,7 @@ class LiveSession(threading.Thread):
             report = SessionAnalyzer().build_report(
                 engine.judge.history,
                 exercise=engine.exercise,
-                fps=settings.ANALYTICS_FPS,
+                fps=final_fps,
                 total_duration=elapsed,
             )
             settings.EXPORT_DIR.mkdir(parents=True, exist_ok=True)
